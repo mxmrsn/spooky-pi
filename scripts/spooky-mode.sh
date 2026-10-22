@@ -7,6 +7,7 @@
 #   bash ~/spooky/scripts/spooky-mode.sh off       neither
 #   bash ~/spooky/scripts/spooky-mode.sh status    what's running / starts at boot
 #   bash ~/spooky/scripts/spooky-mode.sh restart   restart whichever is running (after ./deploy.sh)
+#   bash ~/spooky/scripts/spooky-mode.sh log [N]   last N log lines of whichever is running
 #   bash ~/spooky/scripts/spooky-mode.sh install   (re)install the service files
 set -u
 cd "$(dirname "$0")/.."
@@ -36,7 +37,7 @@ switch() {  # switch <unit to run, or none>
     $SC enable --now "$1"
     sleep 3
     $SC is-active --quiet "$1" && echo "$1 is running and will start at boot." \
-      || { echo "$1 didn't start:"; journalctl --user -u "$1" -n 20 --no-pager; exit 1; }
+      || { echo "$1 didn't start:"; journalctl --user-unit "$1" -n 20 --no-pager; exit 1; }
   else
     echo "Nothing runs now or at boot."
   fi
@@ -47,6 +48,13 @@ case "${1:-status}" in
   show) switch spooky-show ;;
   off) switch none ;;
   install) install; echo "Service files installed." ;;
+  log)
+    for u in "${UNITS[@]}"; do
+      if $SC is-active --quiet "$u"; then
+        echo "== $u (last ${2:-40} lines)"
+        journalctl --user-unit "$u" -n "${2:-40}" --no-pager -o cat | grep -vE "swigvarlink|^pygame |^Hello from"
+      fi
+    done ;;
   restart)
     for u in "${UNITS[@]}"; do
       if $SC is-active --quiet "$u"; then $SC restart "$u" && echo "Restarted $u"; fi
@@ -55,5 +63,5 @@ case "${1:-status}" in
     for u in "${UNITS[@]}"; do
       printf "%-15s now: %-9s at boot: %s\n" "$u" "$($SC is-active "$u" 2>/dev/null)" "$($SC is-enabled "$u" 2>/dev/null)"
     done ;;
-  *) echo "usage: $0 studio|show|off|status|restart|install"; exit 64 ;;
+  *) echo "usage: $0 studio|show|off|status|restart|log|install"; exit 64 ;;
 esac

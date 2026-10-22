@@ -38,7 +38,7 @@ start() {
     done
     if ! answering; then
       echo "Spooky Studio didn't start. Last lines of its log:"
-      if [ -f "$UNIT" ]; then journalctl --user -u spooky-studio -n 15 --no-pager; else tail -n 15 "$LOG"; fi
+      if [ -f "$UNIT" ]; then journalctl --user-unit spooky-studio -n 15 --no-pager; else tail -n 15 "$LOG"; fi
       exit 1
     fi
   fi
@@ -68,6 +68,6 @@ case "${1:-start}" in
   restart) stop; start ;;
   status)
     if running && answering; then echo "Running: $URL"; elif running; then echo "Starting up..."; else echo "Not running."; fi ;;
-  log) if [ -f "$UNIT" ]; then journalctl --user -u spooky-studio -n 40 --no-pager; else tail -n 40 "$LOG"; fi ;;
+  log) if [ -f "$UNIT" ]; then journalctl --user-unit spooky-studio -n 40 --no-pager; else tail -n 40 "$LOG"; fi ;;
   *) echo "usage: $0 start|stop|restart|status|log"; exit 64 ;;
 esac

@@ -1,0 +1,23 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]  # PC dev and the Pi's Raspberry Pi OS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: pip install opencv-python-headless numpy pytest
+      - name: Shell scripts parse
+        run: for f in scripts/*.sh launchers/*.command deploy.sh; do bash -n "$f"; done && sh -n imx/spooky-display.sh
+      - name: Test
+        run: python -m pytest -q

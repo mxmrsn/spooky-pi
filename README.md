@@ -87,6 +87,7 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 | Test clips before real ones | `python tools/make_placeholders.py` (`--clean` removes them) |
 | Focus the camera | `python tools/focus_view.py`, then open `http://spooky-pi.local:8000` |
 | Camera-only check | `python tools/face_trigger.py` |
+| Check / tune the PIR sensors | Studio → 🎬 Show → *Motion sensors (live)* scope, or `python tools/pir_test.py` |
 | Run tests | `python -m pytest` (also works on Windows) |
 | Update the README figures | `python tools/render_scenes.py` (LED gallery), `python tools/render_diagrams.py` (diagrams; on a PC with Chrome or Edge) |
 
@@ -115,6 +116,7 @@ ssh -t spooky-pi@spooky-pi.local "sudo bash ~/spooky/scripts/pi-setup.sh"
 | `bash ~/spooky/scripts/spooky-mode.sh off` | Neither |
 | `bash ~/spooky/scripts/spooky-mode.sh status` | What's running, and what starts at boot |
 | `bash ~/spooky/scripts/spooky-mode.sh restart` | Pick up new code after `./deploy.sh` |
+| `bash ~/spooky/scripts/spooky-mode.sh log` | The running one's recent log (state changes, warnings) |
 
 ## Development
 
@@ -124,3 +126,5 @@ ssh -t spooky-pi@spooky-pi.local "sudo bash ~/spooky/scripts/pi-setup.sh"
 - **Python:** 3.11+ locally, 3.13 on the Pi. `spidev`, `gpiozero` and `pygame` come with Raspberry Pi OS.
 - **Diagrams:** the source for each diagram is in `docs/diagrams/*.mmd` (Mermaid text). After editing, rerun `tools/render_diagrams.py` and commit the regenerated PNG/SVG in `docs/img/`.
 - **Hardware bring-up:** follow the checklist at the bottom of [hardware/BOM.md](hardware/BOM.md), after running `pi-setup.sh` once.
+- **SD card backup:** see [docs/SD-BACKUP.md](docs/SD-BACKUP.md). `tools/shrink-image.sh` makes the image fit a 32 GB card.
+- **CI:** GitHub Actions runs the tests and checks the shell scripts on every push (`.github/workflows/tests.yml`).

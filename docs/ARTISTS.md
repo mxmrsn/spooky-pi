@@ -81,10 +81,11 @@ Built-in looks can't be changed or deleted, so you can't break anything. Save yo
 
 ![Show tab](img/studio_show.png)
 
-1. **▶ Start (pretend camera)**. The pretend camera uses earlier photos, so nobody has to stand in front of it.
+1. **▶ Start (pretend camera)**, or **▶ Start (real camera + sensors)** to use the real motion sensor and camera. The pretend camera uses earlier photos, so nobody has to stand in front of it.
 2. **🚶 Someone walks up**: the show wakes up.
 3. **🙂 Face appears**: the eyes lock on, "hold still!", countdown, snap, scary photo, scream.
-4. The highlighted step shows where the show is. **What the screen shows** is the visitor's view.
-5. **■ Stop** when you're done (you need to stop the show to preview scenes again).
+4. **Motion sensors (live)** at the top shows each sensor as a scrolling trace: up means it sees movement. Use it while adjusting the sensor's two knobs.
+5. The highlighted step shows where the show is. **What the screen shows** is the visitor's view.
+6. **■ Stop** when you're done (you need to stop the show to preview scenes again).
 
 Your saved scenes and moment choices are used by the real show next time it starts.
