@@ -19,6 +19,7 @@ def make_server(studio, host="0.0.0.0", port=8080):
         "/api/frame": lambda q: {"colors": studio.frame()},
         "/api/status": lambda q: studio.status(),
         "/api/library": lambda q: studio.library(),
+        "/api/pir": lambda q: studio.pir_scope(),
     }
     post_routes = {
         "/api/preview": lambda b: studio.preview(b["name"]),
@@ -35,6 +36,7 @@ def make_server(studio, host="0.0.0.0", port=8080):
         "/api/show/stop": lambda b: studio.stop_show(),
         "/api/show/motion": lambda b: studio.motion(int(b.get("sensor", 0))),
         "/api/show/face": lambda b: {"face": studio.toggle_face()},
+        "/api/pir/reset": lambda b: studio.pir_reset(),
     }
 
     class Handler(BaseHTTPRequestHandler):
@@ -91,7 +93,7 @@ def make_server(studio, host="0.0.0.0", port=8080):
             self._call(post_routes[url.path], body)
 
         def log_message(self, fmt, *args):
-            if not self.path.startswith(("/api/frame", "/api/status")):
+            if not self.path.startswith(("/api/frame", "/api/status", "/api/pir")):
                 log.debug(fmt, *args)
 
     return ThreadingHTTPServer((host, port), Handler)

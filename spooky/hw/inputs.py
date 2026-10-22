@@ -32,6 +32,108 @@ class PirSensors:
             s.close()
 
 
+class PirMonitor:
+    """Owns the PIR pins and records their levels for the Studio's live scope.
+
+    `devices` are objects with `.value` and `when_activated` / `when_deactivated`
+    (gpiozero DigitalInputDevice); tests pass fakes. sample() is called from the
+    Studio's LED loop (50 Hz); edges arrive on gpiozero's thread.
+    """
+
+    WINDOW = 15.0  # seconds of trace kept
+
+    def __init__(self, pins, devices=None, clock=time.monotonic):
+        if devices is None:
+            from gpiozero import DigitalInputDevice
+            devices = [DigitalInputDevice(p, pull_up=False) for p in pins]
+        self.pins, self.devices, self.clock = list(pins), devices, clock
+        self.lock = threading.Lock()
+        self.trace = []  # (t, [levels])
+        self.events = queue.SimpleQueue()
+        self.stats = [{"pulses": 0, "rise": None, "last_high": None, "high_total": 0.0} for _ in pins]
+        self.t0 = clock()
+        for i, d in enumerate(devices):
+            d.when_activated = lambda i=i: self._edge(i, True)
+            d.when_deactivated = lambda i=i: self._edge(i, False)
+            if d.value:
+                self.stats[i]["rise"] = self.t0
+
+    def _edge(self, i, high):
+        now = self.clock()
+        with self.lock:
+            st = self.stats[i]
+            if high:
+                st["rise"], st["pulses"] = now, st["pulses"] + 1
+                self.events.put(i)
+            elif st["rise"] is not None:
+                st["last_high"] = now - st["rise"]
+                st["high_total"] += st["last_high"]
+                st["rise"] = None
+
+    def levels(self):
+        return [int(bool(d.value)) for d in self.devices]
+
+    def sample(self, now=None):
+        now = self.clock() if now is None else now
+        lv = self.levels()
+        with self.lock:
+            self.trace.append((now, lv))
+            while self.trace and self.trace[0][0] < now - self.WINDOW:
+                self.trace.pop(0)
+
+    def snapshot(self):
+        now = self.clock()
+        with self.lock:
+            stats = []
+            for st in self.stats:
+                high_now = (now - st["rise"]) if st["rise"] is not None else 0.0
+                stats.append({"pulses": st["pulses"], "last_high": st["last_high"], "high_now": round(high_now, 2),
+                              "high_pct": round(100 * (st["high_total"] + high_now) / max(now - self.t0, 1e-6), 1)})
+            trace = [[round(t - now, 3), *lv] for t, lv in self.trace]
+        return {"available": True, "pins": self.pins, "levels": self.levels(), "trace": trace,
+                "window": self.WINDOW, "stats": stats}
+
+    def reset_stats(self):
+        with self.lock:
+            self.t0 = self.clock()
+            for st, d in zip(self.stats, self.devices):
+                st.update(pulses=0, last_high=None, high_total=0.0, rise=self.t0 if d.value else None)
+
+    def close(self):
+        for d in self.devices:
+            d.close()
+
+
+class MonitorInputs:
+    """Show inputs fed by a PirMonitor (real sensors), plus the Studio's pretend-motion button."""
+
+    HOLD = 3.0
+
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self._manual = queue.SimpleQueue()
+        self._last_manual = -1e9
+        while not monitor.events.empty():  # ignore triggers from before the show started
+            monitor.events.get()
+
+    def trigger(self, sensor=0):
+        self._last_manual = time.monotonic()
+        self._manual.put(sensor)
+
+    def poll(self):
+        fired = []
+        for q in (self.monitor.events, self._manual):
+            while not q.empty():
+                fired.append(q.get())
+        return fired
+
+    def active(self):
+        return any(self.monitor.levels()) or time.monotonic() - self._last_manual < self.HOLD
+
+    def close(self):
+        pass  # the Studio keeps owning the pins
+
+
 class SimInputs:
     """Keyboard stand-in, one command per line on stdin:
 

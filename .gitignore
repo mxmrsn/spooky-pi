@@ -16,3 +16,6 @@ sounds/**/*.flac
 raw/
 media/*
 !media/.keep
+
+# Local Claude Code settings stay on this machine
+.claude/

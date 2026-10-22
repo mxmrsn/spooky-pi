@@ -157,11 +157,17 @@
     <!-- ======================== SHOW ======================== -->
     <div class="tab" id="tab-show">
       <div class="card">
+        <h2>Motion sensors (live)</h2>
+        <p class="hint">High = the sensor sees movement. Use this while turning the knobs: the trace scrolls by in real time.</p>
+        <canvas id="scope" width="1000" height="230"></canvas>
+        <div class="row" id="pirStats"></div>
+      </div>
+      <div class="card">
         <h2>Run the show</h2>
         <p class="hint">The pretend camera uses earlier photos as the visitor, so nobody has to stand in front of it.</p>
         <div class="row" style="margin-top:0">
           <button class="primary" onclick="api('/api/show/start', {camera:'sim'})">▶ Start (pretend camera)</button>
-          <button onclick="api('/api/show/start', {camera:'real'})">▶ Start (real camera)</button>
+          <button onclick="api('/api/show/start', {camera:'real'})">▶ Start (real camera + sensors)</button>
           <button onclick="api('/api/show/stop')">■ Stop</button>
         </div>
         <div class="states" id="stateStrip"></div>
@@ -387,6 +393,53 @@ drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); upload([...e.dataTransfer.files]); };
 document.getElementById("file").onchange = e => upload([...e.target.files]);
 
+// ------------------------------------------------------------------ motion sensor scope
+const scope = document.getElementById("scope"), sctx = scope.getContext("2d");
+function drawScope(d) {
+  const W = scope.width, H = scope.height, lanes = d.pins.length, laneH = H / lanes, left = 90;
+  sctx.fillStyle = "#070607"; sctx.fillRect(0, 0, W, H);
+  sctx.font = "18px system-ui"; sctx.textBaseline = "middle";
+  const x = t => left + (W - left - 10) * (1 + t / d.window);  // t is seconds ago (negative)
+  sctx.strokeStyle = "#2a2427"; sctx.lineWidth = 1;
+  for (let s = 0; s <= d.window; s += 1) {  // 1 s grid
+    sctx.beginPath(); sctx.moveTo(x(-s), 0); sctx.lineTo(x(-s), H); sctx.stroke();
+  }
+  d.pins.forEach((pin, i) => {
+    const top = i * laneH, hi = top + laneH * 0.2, lo = top + laneH * 0.8, on = d.levels[i];
+    sctx.fillStyle = on ? "#7dff5a" : "#a39aa0";
+    sctx.fillText(`PIR ${i + 1}`, 10, top + laneH * 0.38);
+    sctx.font = "13px system-ui"; sctx.fillText(`GPIO${pin}`, 10, top + laneH * 0.62); sctx.font = "18px system-ui";
+    sctx.strokeStyle = on ? "#7dff5a" : "#ff4a3d"; sctx.lineWidth = 3; sctx.beginPath();
+    d.trace.forEach((p, k) => {
+      const y = p[1 + i] ? hi : lo;
+      if (k === 0) sctx.moveTo(x(p[0]), y);
+      else { sctx.lineTo(x(p[0]), d.trace[k - 1][1 + i] ? hi : lo); sctx.lineTo(x(p[0]), y); }
+    });
+    sctx.stroke();
+    if (i < lanes - 1) { sctx.strokeStyle = "#3a3338"; sctx.beginPath(); sctx.moveTo(0, top + laneH); sctx.lineTo(W, top + laneH); sctx.stroke(); }
+  });
+  sctx.fillStyle = "#a39aa0"; sctx.font = "13px system-ui";
+  sctx.fillText(`-${d.window}s`, left, H - 10); sctx.fillText("now", W - 40, H - 10);
+}
+async function pollPir() {
+  if (document.getElementById("tab-show").classList.contains("on")) {
+    try {
+      const d = await get("/api/pir");
+      const box = document.getElementById("pirStats");
+      if (!d.available) {
+        box.innerHTML = '<span class="hint">No sensors connected to this Studio (it runs in pretend mode).</span>';
+      } else {
+        drawScope(d);
+        box.innerHTML = d.stats.map((st, i) => `<span class="pill">PIR ${i + 1}: <b>${d.levels[i] ? "MOTION" : "quiet"}</b>` +
+          ` · ${st.pulses} triggers · last ${st.last_high == null ? "–" : st.last_high.toFixed(1) + " s"}` +
+          `${st.high_now ? " · high " + st.high_now.toFixed(1) + " s" : ""} · ${st.high_pct}% of the time</span>`).join("") +
+          ' <button onclick="api(&quot;/api/pir/reset&quot;)">Reset counts</button>';
+      }
+    } catch (e) {}
+  }
+  setTimeout(pollPir, 100);
+}
+
 // ------------------------------------------------------------------ status / show
 async function pollStatus() {
   try {
@@ -412,7 +465,7 @@ async function pollStatus() {
   renderScenes(); renderPart("rings"); renderPart("pupils");
   const start = location.hash.slice(1);
   if (["glasses", "sounds", "show"].includes(start)) openTab(start);
-  pollFrame(); pollStatus();
+  pollFrame(); pollStatus(); pollPir();
 })();
 </script>
 </body>

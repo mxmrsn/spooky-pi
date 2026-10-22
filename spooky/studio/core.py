@@ -18,7 +18,7 @@ from .. import audio, custom, scenes
 from ..hw import Devices
 from ..hw.camera import Camera, FaceDetector, FaceWatcher, SimCamera
 from ..hw.display import FileDisplay, StreamDisplay
-from ..hw.inputs import SimInputs
+from ..hw.inputs import MonitorInputs, SimInputs
 from ..hw.leds import Leds
 from ..hw.outputs import AimLed, SimAim, SoundBank
 from ..show import Show
@@ -49,7 +49,7 @@ class RecordingLeds(Leds):
 
 
 class Studio:
-    def __init__(self, cfg, leds, player, clock=time.monotonic, custom_path=None):
+    def __init__(self, cfg, leds, player, clock=time.monotonic, custom_path=None, pir=None):
         self.cfg, self.leds, self.player, self.clock = cfg, leds, player, clock
         self.layout = leds.layout
         self.sounds_root = cfg.path(cfg.audio.folder)
@@ -64,6 +64,7 @@ class Studio:
         self.show = None
         self.show_dev = None
         self._stop = threading.Event()
+        self.pir = pir  # PirMonitor owning the real motion sensors, or None
         scenes.load_custom(custom_path)
 
     def note(self, text):
@@ -72,6 +73,8 @@ class Studio:
 
     # ------------------------------------------------------------------ LED loop
     def tick(self):
+        if self.pir is not None:
+            self.pir.sample()
         with self.lock:
             now = self.clock()
             if self.show is not None:
@@ -308,6 +311,10 @@ class Studio:
             else:
                 cam = sim_cam = SimCamera.from_captures(cfg.path(cfg.captures))
             watcher = FaceWatcher(cam, FaceDetector(cfg.camera.detect_scale, cfg.camera.min_score))
+            if camera == "real" and self.pir is not None:
+                inputs = MonitorInputs(self.pir)  # real motion sensors (the button still works too)
+            else:
+                inputs = SimInputs(sim_cam.toggle_face if sim_cam else None, read_stdin=False)
             try:
                 aim = AimLed(cfg.pins.aim_led)
             except Exception:
@@ -319,12 +326,13 @@ class Studio:
                 except OSError as e:
                     log.warning("display stream unavailable (%s); preview only", e)
             self.show_dev = Devices(
-                self.layout, self.leds, SimInputs(sim_cam.toggle_face if sim_cam else None, read_stdin=False),
+                self.layout, self.leds, inputs,
                 aim, SoundBank(self.sounds_root, self.player), display, watcher, sim_cam,
                 VoiceBank(self.sounds_root / "voices", self.player, cfg.audio.voice_chance))
             self.show = Show(cfg, self.show_dev, clock=self.clock)
             self.overlay = None
-        self.note(f"Show started ({'real camera' if camera == 'real' else 'pretend camera'})")
+        real = "real camera + sensors" if self.pir is not None else "real camera, pretend sensors"
+        self.note(f"Show started ({real if camera == 'real' else 'pretend camera and sensors'})")
 
     def stop_show(self):
         with self.lock:
@@ -371,8 +379,18 @@ class Studio:
                 "state_seconds": round(s.elapsed(self.clock()), 1) if s else None,
                 "face": bool(self.show_dev and self.show_dev.sim_camera and self.show_dev.sim_camera.face_on),
                 "display_version": disp.stat().st_mtime if disp.is_file() else None,
+                "pir": self.pir.levels() if self.pir is not None else None,
                 "events": list(self.events),
             }
+
+    def pir_scope(self):
+        if self.pir is None:
+            return {"available": False}
+        return self.pir.snapshot()
+
+    def pir_reset(self):
+        if self.pir is not None:
+            self.pir.reset_stats()
 
     def display_path(self):
         return self.cfg.path(self.cfg.display.file_path)
