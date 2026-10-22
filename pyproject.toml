@@ -1,0 +1,9 @@
+[project]
+name = "spooky-pi"
+version = "0.1.0"
+description = "Evil doctor Halloween installation on a Raspberry Pi 4"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

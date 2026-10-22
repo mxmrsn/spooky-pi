@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Photos of visitors stay on the Pi
+captures/
+
+# Sound files and media may be licensed; keep the folder layout only
+sounds/*/*
+!sounds/*/.keep
+media/*
+!media/.keep

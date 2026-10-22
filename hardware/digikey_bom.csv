@@ -1,0 +1,25 @@
+Digi-Key Part Number,Manufacturer Part Number,Manufacturer,Quantity,Customer Reference,Description
+WM3700-ND,39-01-2020,Molex,10,J-PWR/J-AIM receptacle,Mini-Fit Jr 5557 receptacle 2-ckt dual-row free-hanging
+WM1030-ND,39-01-3023,Molex,10,J-PWR/J-AIM plug,Mini-Fit Jr 5559 plug 2-ckt dual-row free-hanging
+WM18434-ND,39-01-4030,Molex,5,J-RING receptacle,Mini-Fit Jr 5557 receptacle 3-ckt single-row free-hanging
+WM18439-ND,39-01-4036,Molex,5,J-RING plug,Mini-Fit Jr 5559 plug 3-ckt single-row free-hanging
+WM2501CT-ND,39-00-0038,Molex,100,Mini-Fit Jr female crimp,5556 socket tin 18-24 AWG cut tape
+WM2500CT-ND,39-00-0040,Molex,100,Mini-Fit Jr male crimp,5558 pin tin 18-24 AWG cut tape
+WM1721-ND,51021-0300,Molex,10,J-PIR1/J-PIR2 receptacle,PicoBlade receptacle 3-ckt free-hanging
+23-0510470300-ND,51047-0300,Molex,10,J-PIR1/J-PIR2 plug,PicoBlade plug 3-ckt free-hanging
+WM1142CT-ND,50079-8000,Molex,100,PicoBlade female crimp,PicoBlade socket tin 26-28 AWG cut tape
+WM4560CT-ND,50125-8000,Molex,100,PicoBlade male crimp,PicoBlade pin tin 26-28 AWG cut tape
+296-4655-5-ND,SN74AHCT125N,Texas Instruments,2,U1 level shifter,Quad buffer 74AHCT125 14-PDIP (1 spare)
+ED3045-5-ND,ED14DT,On Shore,2,U1 socket,14-pos DIP socket 0.3in
+P14397-ND,EEU-FR1C102L,Panasonic,2,C1 ring bulk cap,1000uF 16V radial electrolytic (1 spare)
+BC1084CT-ND,K104K15X7RF5TL2,Vishay,3,C2 U1 decoupling,0.1uF 50V X7R radial
+IRLB3813PBF-ND,IRLB3813PBF,Infineon,2,Q1 aiming LED switch,N-ch logic-level MOSFET 30V TO-220 (1 spare)
+CF14JT100RCT-ND,CF14JT100R,Stackpole,10,R1 gate resistor,100 ohm 1/4W axial
+CF14JT330RCT-ND,CF14JT330R,Stackpole,10,R2 NeoPixel data resistor,330 ohm 1/4W axial
+CF14JT10K0CT-ND,CF14JT10K0,Stackpole,10,R3 gate pulldown,10k ohm 1/4W axial
+1528-1991-ND,189,Adafruit,2,PIR1/PIR2,PIR motion sensor 5V supply 3.3V output
+1528-2460-ND,3628,Adafruit,1,USB brick 5V tap,USB-A plug to screw terminal breakout
+ED10528-ND,302-S341,On Shore,2,J-GPIO box header,2x17 shrouded box header 2.54mm vertical THT (1 spare)
+SBBTH3040-1-ND,SBBTH3040-1,Chip Quik,1,Driver board,Perfboard 104x81mm plated pad-per-hole
+1528-4559-ND,4559,Adafruit,1,Heat shrink,Heat shrink assortment 280 pcs
+298-1020-ND,PLT1M-C,Panduit,25,Strain relief,Zip tie 3.9in nylon

@@ -1,0 +1,27 @@
+# Copy to spooky.toml and change only what you need. Defaults are in spooky/config.py.
+
+[leds]
+# Wiring order along the data line, starting at the Pi
+chain = [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
+# Which physical LED of each ring sits at 12 o'clock (seen from the front), [left, right]
+ring_offset = [0, 0]
+ring_clockwise = [true, true]
+brightness = 0.4
+max_current_a = 1.5
+
+[camera]
+rotate = "ccw"
+gaze_mirror = true   # flip if the eyes look away from visitors
+
+[show]
+awake_timeout = 20.0
+face_hold = 1.5
+countdown = 3.0
+display_seconds = 12.0
+rearm = 6.0
+save_photos = true
+keep_photos = 50
+
+[display]
+backend = "pygame"   # pygame | file | none
+rotate = 0
