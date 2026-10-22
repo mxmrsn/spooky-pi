@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from ..layout import Layout
 from ..voices import VoiceBank
 from .camera import Camera, FaceDetector, FaceWatcher, SimCamera, quiet_opencv
-from .display import FileDisplay, NullDisplay, PygameDisplay
+from .display import FileDisplay, NullDisplay, PygameDisplay, StreamDisplay
 from .inputs import PirSensors, SimInputs
 from .leds import Leds, NullStrip, SpiStrip, TerminalStrip
 from .outputs import AimLed, LogPlayer, PygamePlayer, SimAim, SoundBank
@@ -93,6 +93,8 @@ def build(cfg, sim=(), terminal_preview=None):
 
     if "display" in sim or cfg.display.backend == "file":
         display = FileDisplay(cfg.display, root)
+    elif cfg.display.backend == "stream":
+        display = _try("display stream", lambda: StreamDisplay(cfg.display, root), lambda: FileDisplay(cfg.display, root))
     elif cfg.display.backend == "pygame":
         display = _try("display", lambda: PygameDisplay(cfg.display, root), lambda: FileDisplay(cfg.display, root))
     else:

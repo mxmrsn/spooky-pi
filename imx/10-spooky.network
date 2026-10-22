@@ -1,0 +1,8 @@
+# systemd-networkd: fixed address for the i.MX on the show network (Ethernet switch with the Pi).
+# Install as /etc/systemd/network/10-spooky.network, then: systemctl restart systemd-networkd
+[Match]
+Name=eth0
+
+[Network]
+Address=192.168.77.2/24
+# No gateway: the show network is just the Pi and this board

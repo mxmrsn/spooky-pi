@@ -2,7 +2,7 @@
 
 Digi-Key cart upload: [digikey_bom.csv](digikey_bom.csv). Use myLists / BOM Manager, choose **Upload a list**, then map the *Digi-Key Part Number* and *Quantity* columns. Prices and stock were checked on 2026-10-22.
 
-Not on the list because they're already on hand: the 2x17 IDC socket and 1.27 mm ribbon, hook-up wire, WAGO lever connectors, and the Molex crimp tools.
+Not on the list because they're already on hand: the 2x17 IDC socket and 1.27 mm ribbon, hook-up wire, WAGO lever connectors, the Molex crimp tools, and the Ethernet switch and cables for the show network (Pi ↔ i.MX 8M Plus, see [imx/README.md](../imx/README.md)).
 
 ## Architecture
 

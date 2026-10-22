@@ -14,4 +14,4 @@ flowchart LR
     LS -- "data · Mini-Fit Jr" --> RING["LED glasses<br/>2 × 16 ring + 2 pupils<br/>34 × WS2812B"]
     Q -- "Mini-Fit Jr" --> AIM["Aiming LED"]
     PI -- "3.5 mm" --> SPK["Powered speaker"]
-    PI -- "Ethernet" --> DISP["i.MX 8M Plus board<br/>+ its display<br/>(protocol TBD)"]
+    PI -- "Ethernet switch<br/>MJPEG stream :8090" --> DISP["i.MX 8M Plus · Yocto<br/>+ its display"]

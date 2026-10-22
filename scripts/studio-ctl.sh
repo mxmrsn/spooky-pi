@@ -11,6 +11,8 @@ URL="http://$(hostname).local:$PORT"
 STUDIO="python -m spooky.studio"
 SHOW="python -m spooky( |$)"  # the show itself, not spooky.studio / spooky.demo (pgrep patterns are regex)
 
+UNIT=~/.config/systemd/user/spooky-studio.service  # installed by spooky-mode.sh
+
 running() { pgrep -f "$STUDIO" >/dev/null; }
 answering() { curl -s -o /dev/null --max-time 2 "http://localhost:$PORT/api/status"; }
 
@@ -24,15 +26,19 @@ start() {
       exit 2
     fi
     echo "Starting Spooky Studio..."
-    # setsid + no stdin: keeps running after the SSH session that started it closes
-    setsid nohup .venv/bin/python -m spooky.studio --port "$PORT" >"$LOG" 2>&1 </dev/null &
+    if [ -f "$UNIT" ]; then
+      systemctl --user start spooky-studio
+    else
+      # setsid + no stdin: keeps running after the SSH session that started it closes
+      setsid nohup .venv/bin/python -m spooky.studio --port "$PORT" >"$LOG" 2>&1 </dev/null &
+    fi
     for _ in $(seq 1 40); do
       answering && break
       sleep 0.5
     done
     if ! answering; then
-      echo "Spooky Studio didn't start. Last lines of $LOG:"
-      tail -n 15 "$LOG"
+      echo "Spooky Studio didn't start. Last lines of its log:"
+      if [ -f "$UNIT" ]; then journalctl --user -u spooky-studio -n 15 --no-pager; else tail -n 15 "$LOG"; fi
       exit 1
     fi
   fi
@@ -44,6 +50,7 @@ stop() {
     echo "Spooky Studio isn't running."
     return
   fi
+  [ -f "$UNIT" ] && systemctl --user stop spooky-studio
   pkill -f "$STUDIO"
   for _ in $(seq 1 20); do
     running || break
@@ -61,6 +68,6 @@ case "${1:-start}" in
   restart) stop; start ;;
   status)
     if running && answering; then echo "Running: $URL"; elif running; then echo "Starting up..."; else echo "Not running."; fi ;;
-  log) tail -n 40 "$LOG" ;;
+  log) if [ -f "$UNIT" ]; then journalctl --user -u spooky-studio -n 40 --no-pager; else tail -n 40 "$LOG"; fi ;;
   *) echo "usage: $0 start|stop|restart|status|log"; exit 64 ;;
 esac

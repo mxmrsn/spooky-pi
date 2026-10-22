@@ -1,14 +1,16 @@
-"""Photo display. The real display's interface isn't settled yet, so this is pluggable:
+"""Photo display backends. All take BGR numpy images (OpenCV's format).
 
-    pygame  fullscreen on the Pi's desktop (HDMI or any screen the desktop drives)
+    stream  serves an MJPEG stream for the i.MX 8M Plus display computer over Ethernet
+            (http://<pi>:8090/stream.mjpg; see imx/README.md), and writes the file too
+    pygame  fullscreen on the Pi's own desktop (HDMI)
     file    writes what would be shown to a JPEG (simulation / headless)
     none    discards everything
-
-All take BGR numpy images (OpenCV's format).
 """
 
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import cv2
@@ -119,21 +121,114 @@ class PygameDisplay(_Base):
 
 
 class FileDisplay(_Base):
-    SIZE = (1080, 1920)  # portrait, matching the rotated camera
+    """Writes each shown image to a JPEG (the Studio previews it from there)."""
 
     def __init__(self, cfg, root):
         super().__init__(cfg, root)
+        self.size = tuple(cfg.size)
         self.path = root / cfg.file_path
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def native_size(self):
-        return self.SIZE
+        w, h = self.size
+        return (h, w) if self.rotate in (cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE) else (w, h)
+
+    def render(self, img):
+        """Letterboxed, rotated, display-sized JPEG bytes."""
+        ok, jpg = cv2.imencode(".jpg", self._prep(fit(img, self.native_size())), [cv2.IMWRITE_JPEG_QUALITY, 88])
+        return jpg.tobytes()
 
     def show(self, img):
+        self._write(self.render(img))
+
+    def _write(self, jpg):
         tmp = self.path.with_suffix(".tmp.jpg")
-        cv2.imwrite(str(tmp), self._prep(fit(img, self.SIZE)))
+        tmp.write_bytes(jpg)
         os.replace(tmp, self.path)
         log.info("display -> %s", self.path.name)
+
+
+VIEWER = b"""<!doctype html><title>spooky display</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
+img{width:100vw;height:100vh;object-fit:contain}</style>
+<img src="/stream.mjpg" onerror="setTimeout(()=>location.reload(),2000)">"""
+
+
+class StreamDisplay(FileDisplay):
+    """MJPEG over HTTP for the display computer. It connects to the Pi and pulls:
+
+        /stream.mjpg   multipart JPEG stream: new image on every change, repeated every
+                       KEEPALIVE s so a (re)connecting player gets a picture at once
+        /frame.jpg     the current image
+        /              full-screen viewer page for a browser kiosk
+    """
+
+    KEEPALIVE = 1.0
+
+    def __init__(self, cfg, root, host="0.0.0.0"):
+        super().__init__(cfg, root)
+        self.jpg = self.render(idle_card(self.native_size()))
+        self.version = 0
+        self.cond = threading.Condition()
+        display = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path.startswith("/stream.mjpg"):
+                    return self._stream()
+                body, ctype = {"/frame.jpg": (display.jpg, "image/jpeg"),
+                               "/": (VIEWER, "text/html")}.get(self.path, (None, None))
+                if body is None:
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def _stream(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=spookyframe")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                log.info("display client connected: %s", self.client_address[0])
+                seen = -1
+                try:
+                    while not display.closed:
+                        with display.cond:
+                            if display.version == seen:
+                                display.cond.wait(display.KEEPALIVE)
+                            jpg, seen = display.jpg, display.version
+                        head = b"--spookyframe\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(jpg)
+                        self.wfile.write(head + jpg + b"\r\n")
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    log.info("display client left: %s", self.client_address[0])
+
+            def log_message(self, fmt, *args):
+                pass
+
+        self.closed = False
+        self.server = ThreadingHTTPServer((host, cfg.stream_port), Handler)
+        self.server.daemon_threads = True
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        log.info("display stream on port %d", cfg.stream_port)
+
+    def show(self, img):
+        jpg = self.render(img)
+        with self.cond:
+            self.jpg, self.version = jpg, self.version + 1
+            self.cond.notify_all()
+        self._write(jpg)
+
+    def close(self):
+        self.closed = True
+        with self.cond:
+            self.cond.notify_all()
+        self.server.shutdown()
+        self.server.server_close()
 
 
 class NullDisplay(_Base):

@@ -1,0 +1,11 @@
+flowchart LR
+    subgraph OFFICE["Office Wi-Fi · 10.x"]
+        LAPTOP["Laptops / phones<br/>Studio :8080 · SSH"]
+    end
+    SW["Ethernet switch<br/>show network<br/>192.168.77.x"]
+    PI["Raspberry Pi 4<br/>wlan0: office (DHCP)<br/>eth0: 192.168.77.1<br/>show → MJPEG :8090"]
+    IMX["i.MX 8M Plus · Yocto<br/>eth0: 192.168.77.2<br/>spooky-display.sh<br/>GStreamer → full screen"]
+    LAPTOP <-- "Wi-Fi" --> PI
+    PI <-- "Ethernet" --> SW
+    SW <-- "Ethernet" --> IMX
+    IMX -. "GET /stream.mjpg" .-> PI

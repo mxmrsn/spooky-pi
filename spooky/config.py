@@ -33,7 +33,7 @@ class LedConfig:
     ring_clockwise: list = field(default_factory=lambda: [True, True])
     brightness: float = 0.4  # global cap, 0..1
     gamma: float = 2.2
-    max_current_a: float = 1.5  # estimated LED current budget for the USB brick
+    max_current_a: float = 1.7  # estimated LED current budget: 2 A USB brick minus aiming LED, PIRs, level shifter
     fps: int = 50
     spi_bus: int = 0
     spi_device: int = 0
@@ -64,7 +64,7 @@ class ShowConfig:
     rearm: float = 6.0  # ignore motion this long after a photo, so one visitor isn't snapped twice
     ambient_interval: list = field(default_factory=lambda: [45.0, 120.0])  # idle cackle every N..M s
     save_photos: bool = True
-    keep_photos: int = 50  # older captures are deleted
+    keep_photos: int = 1000  # older captures are deleted (~1 MB per photo + scary version)
     grin: float = 1.0
     eyes: float = 0.3
 
@@ -81,7 +81,9 @@ class AudioConfig:
 
 @dataclass
 class DisplayConfig:
-    backend: str = "pygame"  # pygame | file | none
+    backend: str = "stream"  # stream (to the i.MX 8M Plus over Ethernet) | pygame | file | none
+    size: list = field(default_factory=lambda: [1920, 1080])  # display resolution (stream/file backends)
+    stream_port: int = 8090  # http://<pi>:8090/stream.mjpg for the display computer
     rotate: int = 0  # degrees clockwise applied to everything shown
     idle_image: str = "media/idle.jpg"  # optional attract screen
     file_path: str = "captures/display.jpg"  # used by the file backend

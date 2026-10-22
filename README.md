@@ -31,6 +31,12 @@ Play with the glasses, sounds and show from a browser, with nothing to install: 
 
 Wiring, connectors and parts list: **[hardware/BOM.md](hardware/BOM.md)**. The grounds are shared, but the Pi's 5 V never touches the board.
 
+### Display: i.MX 8M Plus over Ethernet
+
+![Display network](docs/img/display.png)
+
+The show serves the screen as an MJPEG stream on port 8090. The i.MX pulls it with GStreamer and shows it full-screen, reconnecting whenever the Pi or show restarts. Setup for the i.MX: **[imx/README.md](imx/README.md)**.
+
 ## Software
 
 ![Software architecture: inputs, background threads, main loop, outputs](docs/img/software.png)
@@ -93,6 +99,23 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 | `media/idle.jpg` | Optional attract screen between scares |
 | `captures/` | Photos taken (on the Pi only, last 50 kept, never committed) |
 
+## Running it on the Pi
+
+**One-time admin setup** (asks for the Pi password; safe to rerun). It steadies the SPI clock for the LEDs, gives Ethernet its fixed show-network address, and lets services start without a login:
+```
+ssh -t spooky-pi@spooky-pi.local "sudo bash ~/spooky/scripts/pi-setup.sh"
+```
+
+**Pick what the Pi runs, now and after every reboot.** Only one can run at a time, because both use the lights, speaker and display:
+
+| Command (on the Pi) | Runs |
+|---|---|
+| `bash ~/spooky/scripts/spooky-mode.sh studio` | Spooky Studio for the artists (**current mode**) |
+| `bash ~/spooky/scripts/spooky-mode.sh show` | The real show: **use this for the event** |
+| `bash ~/spooky/scripts/spooky-mode.sh off` | Neither |
+| `bash ~/spooky/scripts/spooky-mode.sh status` | What's running, and what starts at boot |
+| `bash ~/spooky/scripts/spooky-mode.sh restart` | Pick up new code after `./deploy.sh` |
+
 ## Development
 
 ![Development workflow: PC, GitHub, Pi](docs/img/dev.png)
@@ -100,4 +123,4 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 - **First time:** run `./deploy.sh --setup` (Git Bash). It creates the venv and installs `requirements.txt`.
 - **Python:** 3.11+ locally, 3.13 on the Pi. `spidev`, `gpiozero` and `pygame` come with Raspberry Pi OS.
 - **Diagrams:** the source for each diagram is in `docs/diagrams/*.mmd` (Mermaid text). After editing, rerun `tools/render_diagrams.py` and commit the regenerated PNG/SVG in `docs/img/`.
-- **Hardware bring-up:** follow the checklist at the bottom of [hardware/BOM.md](hardware/BOM.md). Also add `core_freq_min=500` to `/boot/firmware/config.txt` before the first LED test.
+- **Hardware bring-up:** follow the checklist at the bottom of [hardware/BOM.md](hardware/BOM.md), after running `pi-setup.sh` once.

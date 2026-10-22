@@ -17,7 +17,7 @@ import numpy as np
 from .. import audio, custom, scenes
 from ..hw import Devices
 from ..hw.camera import Camera, FaceDetector, FaceWatcher, SimCamera
-from ..hw.display import FileDisplay
+from ..hw.display import FileDisplay, StreamDisplay
 from ..hw.inputs import SimInputs
 from ..hw.leds import Leds
 from ..hw.outputs import AimLed, SimAim, SoundBank
@@ -312,9 +312,15 @@ class Studio:
                 aim = AimLed(cfg.pins.aim_led)
             except Exception:
                 aim = SimAim()
+            display = FileDisplay(cfg.display, root)
+            if cfg.display.backend == "stream":  # also send it to the real display computer
+                try:
+                    display = StreamDisplay(cfg.display, root)
+                except OSError as e:
+                    log.warning("display stream unavailable (%s); preview only", e)
             self.show_dev = Devices(
                 self.layout, self.leds, SimInputs(sim_cam.toggle_face if sim_cam else None, read_stdin=False),
-                aim, SoundBank(self.sounds_root, self.player), FileDisplay(cfg.display, root), watcher, sim_cam,
+                aim, SoundBank(self.sounds_root, self.player), display, watcher, sim_cam,
                 VoiceBank(self.sounds_root / "voices", self.player, cfg.audio.voice_chance))
             self.show = Show(cfg, self.show_dev, clock=self.clock)
             self.overlay = None
@@ -325,7 +331,7 @@ class Studio:
             if self.show is None:
                 return
             self.show.executor.shutdown(wait=False, cancel_futures=True)
-            for d in (self.show_dev.watcher, self.show_dev.aim):
+            for d in (self.show_dev.watcher, self.show_dev.aim, self.show_dev.display):
                 try:
                     d.close()
                 except Exception as e:
