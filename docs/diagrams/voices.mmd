@@ -1,0 +1,6 @@
+flowchart LR
+    E["show event<br/>e.g. scream"] --> SFX["sound effect<br/>random from sounds/scream/"]
+    E --> CH{"voice_chance<br/>and not talking?"}
+    CH -- yes --> VB["pick a boss by weight<br/>random line from<br/>voices/‹boss›/scream/"]
+    VB --> PLAY["play the line"]
+    VB --> TS["boss's LED scene<br/>(voice.toml) pulsing<br/>with the line's loudness"]

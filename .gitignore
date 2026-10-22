@@ -6,8 +6,13 @@ __pycache__/
 # Photos of visitors stay on the Pi
 captures/
 
-# Sound files and media may be licensed; keep the folder layout only
-sounds/*/*
-!sounds/*/.keep
+# Recordings and media stay out of git (voices of real people, licensed clips);
+# folder layout and voice.toml settings are kept
+sounds/**/*.wav
+sounds/**/*.ogg
+sounds/**/*.mp3
+sounds/**/*.m4a
+sounds/**/*.flac
+raw/
 media/*
 !media/.keep

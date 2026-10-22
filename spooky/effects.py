@@ -213,6 +213,22 @@ class Gaze:
         return _paint(spot, self.col, self.background)
 
 
+class Talk:
+    """Scales another effect by a speech loudness envelope, so the LEDs 'mouth' the words.
+
+    envelope: 0..1 samples at `rate` Hz (audio.ClipInfo.envelope). After it ends the
+    effect sits at `floor`.
+    """
+
+    def __init__(self, effect, envelope, rate=50, floor=0.15):
+        self.effect, self.envelope, self.rate, self.floor = effect, envelope, rate, floor
+
+    def render(self, t, px):
+        i = int(t * self.rate)
+        level = float(self.envelope[i]) if 0 <= i < len(self.envelope) else 0.0
+        return self.effect.render(t, px) * (self.floor + (1 - self.floor) * level)
+
+
 class Blend:
     """Mix two effects: a + b, clipped (e.g. Breathe base plus Sparkle)."""
 

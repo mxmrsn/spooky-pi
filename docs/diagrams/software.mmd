@@ -1,0 +1,41 @@
+flowchart LR
+    STUDIO["studio/ · web page :8080<br/>artists' scenes, sounds, buttons"]
+    subgraph IN["Inputs · spooky/hw"]
+        direction TB
+        PIR["inputs.py<br/>PIR or keyboard"]
+        CAM["camera.py<br/>USB cam or photos"]
+    end
+    subgraph BG["Background threads"]
+        direction TB
+        FW["FaceWatcher<br/>YuNet faces"]
+        EX["scare worker<br/>ScarySmile"]
+    end
+    subgraph CORE["Main loop · 50 Hz"]
+        direction TB
+        SHOW["show.py<br/>state machine"]
+        VO["voices.py<br/>boss lines"]
+        SCN["scenes.py<br/>effects.py"]
+        LAY["layout.py<br/>map · gamma · current cap"]
+    end
+    subgraph OUT["Outputs · spooky/hw"]
+        direction TB
+        LEDS["leds.py<br/>SPI or terminal"]
+        SND["outputs.py<br/>speaker"]
+        AIM["outputs.py<br/>aiming LED"]
+        DSP["display.py<br/>screen or file"]
+    end
+
+    PIR -- motion --> SHOW
+    CAM --> FW -- faces --> SHOW
+    SHOW <-- "photo / scary image" --> EX
+    SHOW -- event --> VO
+    SHOW -- state --> SCN
+    VO -- "talking scene" --> SCN
+    SCN -- frame --> LAY --> LEDS
+    VO -- line --> SND
+    SHOW -- "sound effect" --> SND
+    SHOW -- mode --> AIM
+    SHOW -- photo --> DSP
+    STUDIO -. "custom_scenes.json" .-> SCN
+    STUDIO -. "uploads → sounds/" .-> VO
+    STUDIO -. "pretend PIR / face" .-> SHOW

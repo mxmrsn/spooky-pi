@@ -54,7 +54,8 @@ class CameraConfig:
 @dataclass
 class ShowConfig:
     awake_timeout: float = 20.0  # back to idle if no face appears for this long
-    face_hold: float = 1.5  # eyes follow the face this long before the countdown starts
+    face_hold: float = 4.0  # lock-on: eyes follow the face this long before the countdown (3-5 s avoids false triggers)
+    hold_still_after: float = 1.0  # "hold still!" cue + display card this far into the lock-on
     face_lost_grace: float = 1.5  # countdown aborts if the face is gone this long
     countdown: float = 3.0
     flash: float = 0.25
@@ -72,6 +73,10 @@ class ShowConfig:
 class AudioConfig:
     folder: str = "sounds"
     volume: float = 1.0
+    # Chance a character voice (sounds/voices/*) speaks on each show event, if it has lines for it
+    voice_chance: dict = field(default_factory=lambda: {
+        "ambient": 1.0, "awaken": 0.7, "spotted": 0.8, "hold_still": 1.0, "countdown": 0.0,
+        "shutter": 0.0, "scream": 0.6, "outro": 0.8})
 
 
 @dataclass
@@ -106,6 +111,8 @@ def _merge(obj, data, where):
         current = getattr(obj, key)
         if is_dataclass(current):
             _merge(current, value, f"{where}{key}.")
+        elif isinstance(current, dict):
+            current.update(value)
         else:
             setattr(obj, key, type(current)(value) if isinstance(current, tuple) else value)
 

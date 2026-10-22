@@ -9,6 +9,7 @@ import logging
 from dataclasses import dataclass
 
 from ..layout import Layout
+from ..voices import VoiceBank
 from .camera import Camera, FaceDetector, FaceWatcher, SimCamera, quiet_opencv
 from .display import FileDisplay, NullDisplay, PygameDisplay
 from .inputs import PirSensors, SimInputs
@@ -30,6 +31,7 @@ class Devices:
     display: object
     watcher: FaceWatcher | None
     sim_camera: SimCamera | None = None
+    voices: VoiceBank | None = None
 
     def close(self):
         for d in (self.watcher, self.leds, self.inputs, self.aim, self.sounds, self.display):
@@ -87,6 +89,7 @@ def build(cfg, sim=(), terminal_preview=None):
     aim = SimAim() if "aim" in sim else _try("aiming LED", lambda: AimLed(cfg.pins.aim_led), SimAim)
     player = LogPlayer() if "audio" in sim else _try("audio", lambda: PygamePlayer(cfg.audio.volume), LogPlayer)
     sounds = SoundBank(cfg.path(cfg.audio.folder), player)
+    voices = VoiceBank(cfg.path(cfg.audio.folder) / "voices", player, cfg.audio.voice_chance)
 
     if "display" in sim or cfg.display.backend == "file":
         display = FileDisplay(cfg.display, root)
@@ -95,4 +98,4 @@ def build(cfg, sim=(), terminal_preview=None):
     else:
         display = NullDisplay()
 
-    return Devices(layout, leds, inputs, aim, sounds, display, watcher, sim_camera)
+    return Devices(layout, leds, inputs, aim, sounds, display, watcher, sim_camera, voices)

@@ -9,7 +9,7 @@ DEST="spooky"
 cd "$(dirname "$0")"
 
 tar czf - --exclude=__pycache__ --exclude=.pytest_cache --exclude=captures --exclude=.venv \
-    spooky tools tests ScarySmile sounds media requirements.txt pyproject.toml spooky.example.toml \
+    spooky tools tests scripts ScarySmile sounds media requirements.txt pyproject.toml spooky.example.toml \
     $( [ -f spooky.toml ] && echo spooky.toml ) \
   | ssh "$HOST" "mkdir -p $DEST && tar xzf - -C $DEST"
 

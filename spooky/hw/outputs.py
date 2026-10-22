@@ -4,9 +4,9 @@ import logging
 import random
 from pathlib import Path
 
-log = logging.getLogger(__name__)
+from ..audio import SOUND_EXTS
 
-SOUND_EXTS = {".wav", ".ogg", ".mp3"}
+log = logging.getLogger(__name__)
 
 
 class AimLed:

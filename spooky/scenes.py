@@ -2,13 +2,18 @@
 
 Add or tweak looks here. Each entry is a factory so every use starts fresh
 (some effects, like Gaze, keep state). The show uses the names in STATE_SCENES;
-`python -m spooky.demo` previews any of them.
+`python -m spooky.demo` previews any of them. Scenes made in the Studio come from
+custom_scenes.json (see custom.py) and are added on top by load_custom().
 """
+
+import logging
 
 import numpy as np
 
+from . import custom
+from .audio import ENVELOPE_HZ
 from .effects import (Blend, Breathe, Comet, Fill, Flicker, Gaze, Lightning, Off, Rainbow, Sequence,
-                      Solid, Sparkle, Strobe)
+                      Solid, Sparkle, Strobe, Talk)
 
 
 class Scene:
@@ -26,6 +31,7 @@ class Scene:
     def gaze(self):
         """The Gaze effect in this scene, if any, so the show can steer it."""
         for e in (self.rings, self.pupils):
+            e = e.effect if isinstance(e, Talk) else e
             if isinstance(e, Gaze):
                 return e
         return None
@@ -53,6 +59,10 @@ SCENES = {
                                         (Strobe("blood", hz=12), 0.5),
                                         (Breathe("blood", period=1.0), 1.0)),
                                Flicker("amber", amount=0.9, speed=2)),
+    # --- character signatures (pick one in sounds/voices/<name>/voice.toml) --------
+    "rage": lambda: Scene(Flicker("blood", amount=0.4, speed=3), Solid("white")),
+    "glare": lambda: Scene(Breathe("amber", period=1.5, low=0.3, high=1.0), Solid("amber")),
+    "venom": lambda: Scene(Comet("toxic", speed=0.6, tail=0.8, heads=2), Solid("slime")),
 }
 
 # Which scene each show state uses
@@ -68,8 +78,50 @@ STATE_SCENES = {
 }
 
 
+BUILTIN = set(SCENES)
+BUILTIN_STATE_SCENES = dict(STATE_SCENES)
+log = logging.getLogger(__name__)
+
+
+def load_custom(path=None):
+    """(Re)load artist scenes and state assignments from custom_scenes.json. Bad entries are skipped."""
+    for name in [n for n in SCENES if n not in BUILTIN]:
+        del SCENES[name]
+    STATE_SCENES.clear()
+    STATE_SCENES.update(BUILTIN_STATE_SCENES)
+    data = custom.load(path)
+    for name, spec in data["scenes"].items():
+        if name in BUILTIN:
+            log.warning("custom scene %r ignored: that name is built in", name)
+            continue
+        try:
+            custom.build(spec)  # validate now rather than mid-show
+        except Exception as e:
+            log.warning("custom scene %r skipped: %s", name, e)
+            continue
+        SCENES[name] = lambda spec=spec: Scene(*custom.build(spec))
+    for state, name in data["state_scenes"].items():
+        if state in STATE_SCENES and name in SCENES:
+            STATE_SCENES[state] = name
+    return data
+
+
 def make(name):
     try:
         return SCENES[name]()
     except KeyError:
         raise KeyError(f"Unknown scene {name!r}; choose from {', '.join(SCENES)}") from None
+
+
+def talking(line, fallback):
+    """Scene while a voice line plays: the voice's own scene (or `fallback`), pulsing with the words."""
+    scene = make(line.voice.scene or fallback)
+    env = line.info.envelope
+    if line.voice.talk in ("rings", "all"):
+        scene.rings = Talk(scene.rings, env, ENVELOPE_HZ)
+    if line.voice.talk in ("pupils", "all"):
+        scene.pupils = Talk(scene.pupils, env, ENVELOPE_HZ)
+    return scene
+
+
+load_custom()

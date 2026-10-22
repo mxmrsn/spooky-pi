@@ -139,7 +139,7 @@ def test_full_scare_cycle(rig):
     run(show, clock, sc.display_seconds)
     assert show.state is State.IDLE
     assert dev.display.calls[-1] == ("idle",)
-    assert sounds_played(dev) == ["awaken", "countdown", "shutter", "scream"]
+    assert sounds_played(dev) == ["awaken", "spotted", "hold_still", "countdown", "shutter", "scream", "outro"]
 
     # re-arm delay: motion right away is ignored
     dev.inputs.pending.append(1)
@@ -160,7 +160,7 @@ def test_face_lost_returns_to_awake_quietly(rig):
     dev.watcher.face = False
     run(show, clock, sc.face_lost_grace + 0.2)
     assert show.state is State.AWAKE
-    assert sounds_played(dev) == ["awaken"]
+    assert sounds_played(dev) == ["awaken", "spotted"]  # no second "awaken"
 
 
 def test_countdown_aborts_when_face_leaves(rig):
@@ -222,3 +222,46 @@ def test_gaze_follows_face(rig):
     assert show.state is State.WATCHING
     dx, dy = show.scene.gaze.look
     assert dx < 0  # image-right is the glasses' left seen from the front (gaze_mirror)
+
+
+def test_voice_line_takes_over_leds_except_in_countdown(rig, tmp_path):
+    from spooky import audio
+    from spooky.voices import VoiceBank
+
+    show, dev, clock, sc = rig
+    for event in ("awaken", "countdown"):
+        audio.write_wav(tmp_path / "boss" / event / "line.wav", np.full(8000 * 2, 0.3), 8000)
+    (tmp_path / "boss" / "voice.toml").write_text('scene = "rage"\n')
+    dev.voices = VoiceBank(tmp_path, Recorder(), chance={"awaken": 1.0, "countdown": 1.0})
+
+    dev.inputs.pending.append(0)
+    run(show, clock, DT)
+    assert show.state is State.AWAKE and show.overlay is not None
+    scene, t = show.active_scene(clock.t)
+    assert scene is show.overlay[0] and scene is not show.scene
+    run(show, clock, 2.5)
+    assert show.overlay is None  # line finished: back to the state's scene
+
+    dev.watcher.face = True
+    run(show, clock, sc.face_hold + 0.3)
+    assert show.state is State.COUNTDOWN
+    assert show.overlay is None  # the countdown fill is never hidden
+
+
+def test_lock_on_says_hold_still_and_clears_card_if_they_leave(rig):
+    show, dev, clock, sc = rig
+    dev.inputs.pending.append(0)
+    dev.watcher.face = True
+    run(show, clock, 0.3)
+    assert show.state is State.WATCHING
+    green = show.scene.gaze.col
+    run(show, clock, sc.hold_still_after)
+    assert "hold_still" in sounds_played(dev)
+    assert dev.display.calls[-1] == ("card", "HOLD STILL!")
+    assert show.scene.gaze.col[0] > green[0]  # spot is turning red
+    assert show.state is State.WATCHING  # still locking on (4 s)
+    dev.watcher.face = False
+    run(show, clock, sc.face_lost_grace + 0.2)
+    assert show.state is State.AWAKE
+    assert dev.display.calls[-1] == ("idle",)
+    assert sounds_played(dev).count("hold_still") == 1

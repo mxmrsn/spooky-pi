@@ -1,0 +1,5 @@
+flowchart LR
+    R["raw clips<br/>phone memo, video…"] --> P["tools/prep_audio.py<br/>trim · normalise · .ogg"]
+    P --> F["sounds/voices/‹boss›/‹event›/"]
+    F --> L["spooky.audition list<br/>levels + warnings"]
+    L --> A["spooky.audition play ‹boss›<br/>hear it with the LEDs"]

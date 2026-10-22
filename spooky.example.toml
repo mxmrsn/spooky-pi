@@ -15,7 +15,8 @@ gaze_mirror = true   # flip if the eyes look away from visitors
 
 [show]
 awake_timeout = 20.0
-face_hold = 1.5
+face_hold = 4.0          # lock-on time before the countdown (3-5 s avoids false triggers)
+hold_still_after = 1.0   # "hold still!" cue this far into the lock-on
 countdown = 3.0
 display_seconds = 12.0
 rearm = 6.0

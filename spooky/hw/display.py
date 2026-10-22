@@ -31,13 +31,29 @@ def fit(img, size):
     return out
 
 
-def idle_card(size, text="Step closer... if you dare"):
+def idle_card(size, text="Step closer... if you dare", max_chars=None):
+    """Red text on black, wrapped to lines of ~max_chars and scaled to fill 85% of the width."""
     w, h = size
+    max_chars = max_chars or (7 if h > w else 12)  # portrait screens: shorter, bigger lines
     out = np.zeros((h, w, 3), np.uint8)
-    scale = w / 900
-    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 2)
-    cv2.putText(out, text, ((w - tw) // 2, (h + th) // 2), cv2.FONT_HERSHEY_DUPLEX, scale,
-                (0, 0, 160), max(1, round(2 * scale)), cv2.LINE_AA)
+    lines, line = [], ""
+    for word in text.split():
+        if line and len(line) + 1 + len(word) > max_chars:
+            lines.append(line)
+            line = word
+        else:
+            line = f"{line} {word}".strip()
+    lines.append(line)
+    font = cv2.FONT_HERSHEY_DUPLEX
+    widest = max(cv2.getTextSize(ln, font, 1.0, 2)[0][0] for ln in lines)
+    scale = 0.85 * w / widest
+    thick = max(2, round(2.5 * scale))
+    line_h = cv2.getTextSize("Hg", font, scale, thick)[0][1] * 1.6
+    y = (h - line_h * (len(lines) - 1)) / 2
+    for ln in lines:
+        (tw, th), _ = cv2.getTextSize(ln, font, scale, thick)
+        cv2.putText(out, ln, ((w - tw) // 2, round(y + th / 2)), font, scale, (0, 0, 220), thick, cv2.LINE_AA)
+        y += line_h
     return out
 
 
@@ -52,6 +68,10 @@ class _Base:
 
     def idle(self):
         self.show(self.idle_image if self.idle_image is not None else idle_card(self.native_size()))
+
+    def card(self, text):
+        """Full-screen text, e.g. HOLD STILL! during the lock-on."""
+        self.show(idle_card(self.native_size(), text))
 
     def pump(self):
         """Handle window events; returns False if the user asked to quit."""

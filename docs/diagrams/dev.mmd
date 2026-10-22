@@ -1,0 +1,4 @@
+flowchart LR
+    PC["Windows PC<br/>edit · pytest"] -- "./deploy.sh<br/>(tar over ssh)" --> PI["Pi ~/spooky<br/>.venv"]
+    PC -- "git push" --> GH["GitHub"]
+    PI -- "ssh spooky-pi@spooky-pi.local" --> RUN["run / audition / demo"]

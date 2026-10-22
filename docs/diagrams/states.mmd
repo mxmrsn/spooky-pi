@@ -1,0 +1,13 @@
+flowchart TB
+    START(( )) --> IDLE
+    IDLE(["IDLE"]) -- "PIR motion" --> AWAKE(["AWAKE"])
+    AWAKE -- "face seen" --> WATCHING(["WATCHING"])
+    WATCHING -- "face held 4 s<br/>(hold still! at 1 s)" --> COUNTDOWN(["COUNTDOWN"])
+    COUNTDOWN -- "3 s" --> CAPTURE(["CAPTURE"])
+    CAPTURE -- "frame grabbed" --> PROCESSING(["PROCESSING"])
+    PROCESSING -- "scary photo ready" --> REVEAL(["REVEAL"])
+    REVEAL -- "2.5 s" --> SHOWING(["SHOWING"])
+    SHOWING -- "12 s (+6 s re-arm)" --> IDLE
+    AWAKE -- "20 s, no face/motion" --> IDLE
+    WATCHING -- "face lost" --> AWAKE
+    COUNTDOWN -- "face lost" --> AWAKE
