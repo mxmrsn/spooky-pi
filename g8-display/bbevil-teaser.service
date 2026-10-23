@@ -1,0 +1,20 @@
+[Unit]
+Description=BBeviL Halloween teaser (fullscreen video loop)
+Requires=weston.service
+After=weston.service
+
+[Service]
+User=weston
+Group=weston
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=GDK_BACKEND=wayland
+# Give the PulseAudio user session a moment to come up so audio is not lost
+ExecStartPre=/bin/sh -c "for i in $(seq 1 20); do [ -S /run/user/1000/pulse/native ] && exit 0; sleep 0.5; done; exit 0"
+ExecStartPre=-/bin/sh -c "for s in $$(pactl list short sinks | cut -f2); do pactl set-sink-mute $$s 0; pactl set-sink-volume $$s 100%%; done"
+ExecStart=/usr/bin/python3 /root/loop_teaser.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target
