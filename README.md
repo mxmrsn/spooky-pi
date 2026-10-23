@@ -37,6 +37,8 @@ Wiring, connectors and parts list: **[hardware/BOM.md](hardware/BOM.md)**. The g
 
 The show serves the screen as an MJPEG stream on port 8090. The i.MX pulls it with GStreamer and shows it full-screen, reconnecting whenever the Pi or show restarts. Setup for the i.MX: **[imx/README.md](imx/README.md)**.
 
+**G8 display teaser:** to play the BBeviL Halloween teaser on its own, full-screen and on a loop on the G8 display, see **[g8-display/README.md](g8-display/README.md)**.
+
 ## Software
 
 ![Software architecture: inputs, background threads, main loop, outputs](docs/img/software.png)

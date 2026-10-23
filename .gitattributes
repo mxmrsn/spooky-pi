@@ -2,5 +2,6 @@
 * text=auto eol=lf
 *.sh text eol=lf
 *.onnx binary
+*.mp4 binary
 *.cmd text eol=crlf
 *.command text eol=lf
