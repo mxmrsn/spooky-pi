@@ -27,10 +27,9 @@ def test_ring_offset_and_direction():
 
 def test_default_chain_has_no_pupils():
     lay = Layout(LedConfig())
-    assert lay.n == 34 and lay.n_physical == 32 and list(lay.perm) == list(range(32))
-    frame = np.zeros((34, 3))
-    frame[32:] = 1.0  # pupils lit in the scene, but not on the chain
-    assert lay.to_physical(frame).shape == (32, 3) and not lay.to_physical(frame).any()
+    assert lay.n == lay.n_physical == 32 and lay.pupils.n == 0 and list(lay.perm) == list(range(32))
+    frame = scenes.make("idle").render(1.0, lay)  # the pupils effect has nothing to draw
+    assert frame.shape == (32, 3) and lay.to_physical(frame).shape == (32, 3)
 
 
 def test_bad_chain_rejected():
@@ -58,7 +57,7 @@ def test_brightness_gamma_and_current_cap():
     lay = Layout(cfg)
     phys = lay.to_physical(np.ones((lay.n, 3)))
     assert lay.estimate_current_a(phys) <= 0.5 + 0.01
-    half = Layout(LedConfig(brightness=0.5, gamma=2.0, max_current_a=100)).to_physical(np.full((34, 3), 0.5))
+    half = Layout(LedConfig(brightness=0.5, gamma=2.0, max_current_a=100)).to_physical(np.full((32, 3), 0.5))
     assert half.max() == round(255 * 0.25 * 0.5)
 
 

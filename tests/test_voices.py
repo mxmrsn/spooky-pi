@@ -89,18 +89,25 @@ def test_talking_scene_follows_envelope(library, tmp_path):
     line = bank.pick("awaken")
     line.info.envelope[:] = 0
     line.info.envelope[10:20] = 1.0
-    scene = scenes.talking(line, "awake")
-    lay = Layout(Config().leds)
+    lay = Layout(Config().leds)  # no pupils fitted: a pupil-talker talks with the rings
+    assert lay.pupils.n == 0
+    scene = scenes.talking(line, "awake", pupils=False)
     quiet = scene.render(0.05, lay)
     loud = scene.render(0.3, lay)
-    assert loud[lay.pupils.index].max() > 3 * quiet[lay.pupils.index].max()
+    assert loud[lay.rings.index].max() > 3 * quiet[lay.rings.index].max()
+
+    cfg = Config()
+    cfg.leds.chain = [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
+    lay = Layout(cfg.leds)
+    scene = scenes.talking(line, "awake", pupils=True)
+    assert scene.render(0.3, lay)[lay.pupils.index].max() > 3 * scene.render(0.05, lay)[lay.pupils.index].max()
 
 
 def test_talk_effect_after_clip_sits_at_floor():
     lay = Layout(Config().leds)
     eff = Talk(Solid("white"), np.ones(5), rate=50, floor=0.2)
-    assert eff.render(0.0, lay.pupils).max() == pytest.approx(1.0)
-    assert eff.render(5.0, lay.pupils).max() == pytest.approx(0.2)
+    assert eff.render(0.0, lay.rings).max() == pytest.approx(1.0)
+    assert eff.render(5.0, lay.rings).max() == pytest.approx(0.2)
 
 
 def test_library_report_flags_problems(library):

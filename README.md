@@ -13,6 +13,8 @@ Play with the glasses, sounds and show from a browser, with nothing to install: 
 
 **[Artist guide →](docs/ARTISTS.md)**: build and save LED scenes with sliders, drop in voice recordings, hear the bosses with talking glasses, and run the show with big buttons.
 
+**[Driving the eyes →](docs/EYES.md)**: for teammates integrating their own work: the show's state machine, every eye state, and an HTTP API (port 8070) to hold the eyes in any state or start/reset a visit.
+
 ---
 
 ## A visit, start to finish
@@ -89,6 +91,7 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 | Test clips before real ones | `python tools/make_placeholders.py` (`--clean` removes them) |
 | Focus the camera | `python tools/focus_view.py`, then open `http://spooky-pi.local:8000` |
 | Camera-only check | `python tools/face_trigger.py` |
+| Hold the eyes in a state | `python tools/eyes.py rage --seconds 5` (show running; see docs/EYES.md) |
 | Check the LED chain | `python tools/led_test.py` (Studio/show stopped) |
 | Check / tune PIR sensors, if fitted | `python tools/pir_scope.py` (live traces in a browser) or `python tools/pir_test.py` |
 | Flash the Teensy firmware | `bash scripts/teensy-flash.sh` (from your PC; needs arduino-cli + the Teensy core) |

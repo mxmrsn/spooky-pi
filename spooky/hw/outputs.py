@@ -40,7 +40,7 @@ class SimAim:
 
     def set(self, mode):
         if mode != self.mode:
-            log.info("aim LED -> %s", mode)
+            log.debug("aim LED -> %s", mode)  # no aiming LED fitted in the Teensy build
         self.mode = mode
 
     def close(self):

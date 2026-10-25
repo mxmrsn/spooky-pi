@@ -133,7 +133,8 @@ def cmd_play(cfg, args):
         for label, event, path, voice in clips:
             info = audio.analyse(path)
             state_scene = scenes.STATE_SCENES[EVENT_STATE[event]]
-            scene = scenes.talking(Line(voice, event, info), state_scene) if voice else scenes.make(state_scene)
+            scene = (scenes.talking(Line(voice, event, info), state_scene, leds.layout.pupils.n > 0) if voice
+                     else scenes.make(state_scene))
             print(f"> {label}/{path.name}  {info.duration:.1f} s")
             player.play(path)
             _animate(leds, scene, info.duration + args.gap, f"{label}/{path.name}")

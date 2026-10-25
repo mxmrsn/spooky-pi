@@ -225,7 +225,8 @@ class Studio:
         voice = load_voice(self.sounds_root / "voices" / parts[1]) if parts[0] == "voices" else None
         event = parts[2] if voice else parts[0]
         state_scene = scenes.STATE_SCENES[EVENT_STATE.get(event, "IDLE")]
-        scene = scenes.talking(Line(voice, event, info), state_scene) if voice else scenes.make(state_scene)
+        scene = (scenes.talking(Line(voice, event, info), state_scene, self.layout.pupils.n > 0) if voice
+                 else scenes.make(state_scene))
         with self.lock:
             if self.show is None:
                 now = self.clock()

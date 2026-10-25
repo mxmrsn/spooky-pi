@@ -321,3 +321,76 @@ def test_step_closer_when_face_is_small(rig):
     sc.close_enough = 0.5  # the test face is a third of the frame wide
     run(show, clock, DT)
     assert dev.display.calls[-1] == ("feed", CLOSER_TEXT)
+
+
+def test_eyes_override_holds_then_expires(rig):
+    show, dev, clock, sc = rig
+    show.command("eyes", "rage", 2.0)
+    run(show, clock, DT)
+    assert show.active_scene(clock.t)[0] is show.eyes_override[1]
+    status = show.eyes_status()
+    assert status["eyes"] == "rage" and status["override"]["seconds_left"] == pytest.approx(2.0 - DT, abs=0.06)
+    assert status["show_state"] == "IDLE" and "glare" in status["eye_states"]
+    run(show, clock, 2.0)
+    assert show.eyes_override is None and show.eyes_status()["eyes"] == "idle"
+
+
+def test_eyes_override_until_cleared_survives_state_changes(rig):
+    show, dev, clock, sc = rig
+    show.command("eyes", "storm", None)
+    dev.inputs.pending.append(0)
+    dev.watcher.face = True
+    run(show, clock, 1.0)
+    assert show.state is State.WATCHING and show.eyes_status()["eyes"] == "storm"
+    show.command("eyes", None, None)
+    run(show, clock, DT)
+    assert show.eyes_override is None and show.eyes_status()["eyes"] == "watching"
+
+
+def test_wake_and_reset_commands(rig):
+    show, dev, clock, sc = rig
+    show.command("reset")  # already idle: nothing to do
+    show.command("wake")
+    run(show, clock, DT)
+    assert show.state is State.AWAKE
+    show.command("wake")  # only wakes from IDLE
+    run(show, clock, DT)
+    assert show.state is State.AWAKE
+    show.command("reset")
+    run(show, clock, DT)
+    assert show.state is State.IDLE and sounds_played(dev) == ["awaken"]
+
+
+def test_control_api_over_http(rig):
+    import json
+    import urllib.error
+    import urllib.request
+    from spooky.control import ControlServer
+
+    show, dev, clock, sc = rig
+    ctl = ControlServer(show, 0, host="127.0.0.1")
+    base = f"http://127.0.0.1:{ctl.port}"
+
+    def post(path, body):
+        req = urllib.request.Request(base + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req) as r:
+                return r.status, json.load(r)
+        except urllib.error.HTTPError as e:
+            return e.code, json.load(e)
+
+    try:
+        assert b"POST /eyes" in urllib.request.urlopen(base + "/").read()
+        assert post("/eyes", {"state": "venom", "seconds": 3}) == (200, {"ok": True})
+        run(show, clock, DT)
+        status = json.load(urllib.request.urlopen(base + "/eyes"))
+        assert status["eyes"] == "venom" and status["override"]["state"] == "venom"
+        code, err = post("/eyes", {"state": "nope"})
+        assert code == 400 and "unknown eye state" in err["error"]
+        assert post("/eyes", {"state": "venom", "seconds": -1})[0] == 400
+        assert post("/show", {"action": "dance"})[0] == 400
+        assert post("/show", {"action": "wake"})[0] == 200
+        run(show, clock, DT)
+        assert show.state is State.AWAKE
+    finally:
+        ctl.close()

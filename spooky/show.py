@@ -16,11 +16,16 @@ The screen shows the live (mirrored) camera feed with prompts while the camera i
 (step closer / hold still / a countdown), a white flash for the photo, the photo while
 the scary version is made, then before and after side by side.
 
+Teammates can drive it from outside (control.py): hold the eyes in any scene for a
+while or until cleared, start a visit, or reset to IDLE. command() queues these and
+step() applies them, so any thread may call it.
+
 step(now) does all the work, so tests drive it with a fake clock.
 """
 
 import logging
 import math
+import queue
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -79,6 +84,9 @@ class Show:
         self.executor = executor or ThreadPoolExecutor(max_workers=1)
         self.state = None
         self.scene = None
+        self.scene_name = None
+        self.commands = queue.SimpleQueue()  # (name, args) from command(), applied by step()
+        self.eyes_override = None  # (name, scene, start, until or None) set through the control API
         self.entered = 0.0
         self.rearm_until = 0.0
         self.last_activity = -1e9
@@ -99,7 +107,8 @@ class Show:
     def _enter(self, state, now, quiet=False):
         log.info("%s -> %s", self.state.name if self.state else "start", state.name)
         self.state, self.entered = state, now
-        self.scene = scenes.make(scenes.STATE_SCENES[state.name])
+        self.scene_name = scenes.STATE_SCENES[state.name]
+        self.scene = scenes.make(self.scene_name)
         if isinstance(self.scene.rings, Fill):
             self.scene.rings.duration = self.sc.countdown
         if state in KEEP_SCENE:
@@ -124,12 +133,17 @@ class Show:
         voices = getattr(self.dev, "voices", None)
         line = voices.speak(event, now, force=self.force_voice) if voices else None
         if line is not None and self.state not in KEEP_SCENE:
-            scene = scenes.talking(line, scenes.STATE_SCENES[self.state.name])
+            scene = scenes.talking(line, scenes.STATE_SCENES[self.state.name], self.dev.layout.pupils.n > 0)
             self.overlay = (scene, now, now + line.duration + 0.3)
         return line
 
     def active_scene(self, now):
-        """(scene, its t) to render now: a talking voice's scene, else the state's."""
+        """(scene, its t) to render now: a control override, a talking voice's scene, else the state's."""
+        if self.eyes_override is not None:
+            _, scene, start, until = self.eyes_override
+            if until is None or now < until:
+                return scene, now - start
+            self.eyes_override = None
         if self.overlay is not None:
             scene, start, end = self.overlay
             if now < end:
@@ -157,12 +171,47 @@ class Show:
             return
         hx, hy = sighting.biggest_face_center()
         dx = -2 * hx if self.cfg.camera.gaze_mirror else 2 * hx
-        for scene in (self.scene, self.overlay[0] if self.overlay else None):
-            if scene is not None and scene.gaze is not None:
+        for scene in self._scenes():
+            if scene.gaze is not None:
                 scene.gaze.look = (dx, -2 * hy)
+
+    def _scenes(self):
+        """Every scene that may be on the LEDs: the state's, a voice's and a control override."""
+        extra = [self.overlay[0] if self.overlay else None, self.eyes_override[1] if self.eyes_override else None]
+        return [s for s in [self.scene, *extra] if s is not None]
+
+    # ------------------------------------------------------------------ control
+    def command(self, name, *args):
+        """Queue a command from any thread: ("eyes", state or None, seconds or None), ("wake",), ("reset",)."""
+        self.commands.put((name, args))
+
+    def _apply_commands(self, now):
+        while not self.commands.empty():
+            name, args = self.commands.get()
+            if name == "eyes":
+                state, seconds = args
+                self.eyes_override = None if state is None else (
+                    state, scenes.make(state), now, now + seconds if seconds else None)
+                log.info("eyes -> %s", f"{state}" + (f" for {seconds} s" if seconds else "") if state else "show")
+            elif name == "wake" and self.state is State.IDLE:
+                self.woke_by_face, self.face_since = False, None
+                self.last_activity = now  # counts as a visitor, so AWAKE waits its timeout for a face
+                self._enter(State.AWAKE, now)
+            elif name == "reset" and self.state is not State.IDLE:
+                self._enter(State.IDLE, now, quiet=True)
+
+    def eyes_status(self, now=None):
+        now = self.clock() if now is None else now
+        o = self.eyes_override
+        override = None
+        if o is not None and (o[3] is None or now < o[3]):
+            override = {"state": o[0], "seconds_left": None if o[3] is None else round(o[3] - now, 1)}
+        return {"show_state": self.state.name, "eyes": override["state"] if override else self.scene_name,
+                "override": override, "eye_states": list(scenes.SCENES), "show_eye_states": dict(scenes.STATE_SCENES)}
 
     # ------------------------------------------------------------------ states
     def step(self, now):
+        self._apply_commands(now)
         fired = self.dev.inputs.poll()
         if fired or self.dev.inputs.active():
             self.last_activity = now
@@ -248,8 +297,8 @@ class Show:
 
     def _lock_on(self, progress):
         """Eye spot narrows and turns from green to red as the lock-on completes."""
-        for scene in (self.scene, self.overlay[0] if self.overlay else None):
-            gaze = scene.gaze if scene is not None else None
+        for scene in self._scenes():
+            gaze = scene.gaze
             if gaze is not None:
                 gaze.col = tuple(LOCK_FROM + (LOCK_TO - LOCK_FROM) * progress)
                 gaze.width = 0.14 - 0.08 * progress

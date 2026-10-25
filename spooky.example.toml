@@ -33,3 +33,6 @@ backend = "stream"   # stream (i.MX over Ethernet) | pygame | file | none
 size = [1920, 1080]   # display resolution
 stream_port = 8090
 rotate = 0
+
+[control]
+port = 8070          # control API: drive the eyes / show from other code (docs/EYES.md); 0 = off

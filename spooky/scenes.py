@@ -1,4 +1,8 @@
-"""Scenes: a rings effect plus a pupils effect, by name.
+"""Scenes: a rings effect plus a pupils effect, by name. These are the eye states
+the show (and teammates, through the control API in control.py) switch between.
+
+The current glasses have no pupil LEDs, so only the rings effect shows; the pupils
+effect is kept for builds that fit them.
 
 Add or tweak looks here. Each entry is a factory so every use starts fresh
 (some effects, like Gaze, keep state). The show uses the names in STATE_SCENES;
@@ -37,26 +41,31 @@ class Scene:
         return None
 
 
+# Flashes and strobes are kept gentle: dimmer and slower than the LEDs can go, since
+# full-brightness strobing at arm's length was too much.
+SOFT_WHITE = (0.35, 0.35, 0.35)
+SOFT_BLOOD = (0.45, 0.0, 0.0)
+
 SCENES = {
     # --- used by the show -------------------------------------------------------
     "idle": lambda: Scene(Breathe("blood", period=5, low=0.03, high=0.35),
                           Flicker("ember", amount=0.7, speed=0.5)),
     "awake": lambda: Scene(Comet("toxic", speed=1.2, tail=0.5, heads=2), Solid("blood")),
     "watching": lambda: Scene(Gaze("toxic", background=(0, 0.04, 0)), Solid("blood")),
-    "countdown": lambda: Scene(Fill("white", duration=3.0, background=(0.05, 0, 0)), Strobe("blood", hz=2)),
-    "flash": lambda: Scene(Solid("white")),
+    "countdown": lambda: Scene(Fill((0.6, 0.6, 0.6), duration=3.0, background=(0.05, 0, 0)), Strobe("blood", hz=2)),
+    "flash": lambda: Scene(Solid(SOFT_WHITE)),
     "processing": lambda: Scene(Comet("violet", speed=2.0, tail=0.3, heads=3, mirror=False),
                                 Breathe("magenta", period=0.8)),
-    "reveal": lambda: Scene(Strobe("blood", hz=10), Solid("white")),
+    "reveal": lambda: Scene(Strobe(SOFT_BLOOD, hz=3, duty=0.5, background=(0.06, 0, 0)), Solid("white")),
     "showing": lambda: Scene(Flicker("ember", amount=0.5, speed=1.5), Solid("blood")),
     "off": lambda: Scene(Off()),
     # --- extras to mix into the show or use as attract modes ------------------------
     "storm": lambda: Scene(Lightning("ghost", every=2.5), Breathe("ghost", period=2.5, low=0.0, high=0.3)),
     "toxic_sparkle": lambda: Scene(Blend(Breathe("slime", period=3, low=0.05, high=0.3),
                                          Sparkle("white", rate=4)), Solid("toxic")),
-    "madness": lambda: Scene(Rainbow(speed=0.8), Strobe("white", hz=6)),
+    "madness": lambda: Scene(Rainbow(speed=0.8), Strobe(SOFT_WHITE, hz=4)),
     "possessed": lambda: Scene(Sequence((Comet("blood", speed=3, heads=1), 1.5),
-                                        (Strobe("blood", hz=12), 0.5),
+                                        (Strobe(SOFT_BLOOD, hz=5), 0.5),
                                         (Breathe("blood", period=1.0), 1.0)),
                                Flicker("amber", amount=0.9, speed=2)),
     # --- character signatures (pick one in sounds/voices/<name>/voice.toml) --------
@@ -113,13 +122,15 @@ def make(name):
         raise KeyError(f"Unknown scene {name!r}; choose from {', '.join(SCENES)}") from None
 
 
-def talking(line, fallback):
-    """Scene while a voice line plays: the voice's own scene (or `fallback`), pulsing with the words."""
+def talking(line, fallback, pupils=True):
+    """Scene while a voice line plays: the voice's own scene (or `fallback`), pulsing with the words.
+    Without pupil LEDs (`pupils` False) a voice that talks with its pupils talks with the rings."""
     scene = make(line.voice.scene or fallback)
     env = line.info.envelope
-    if line.voice.talk in ("rings", "all"):
+    talk = "rings" if line.voice.talk == "pupils" and not pupils else line.voice.talk
+    if talk in ("rings", "all"):
         scene.rings = Talk(scene.rings, env, ENVELOPE_HZ)
-    if line.voice.talk in ("pupils", "all"):
+    if talk in ("pupils", "all"):
         scene.pupils = Talk(scene.pupils, env, ENVELOPE_HZ)
     return scene
 

@@ -106,6 +106,11 @@ class DisplayConfig:
 
 
 @dataclass
+class ControlConfig:
+    port: int = 8070  # control API for teammates to drive the eyes and the show (docs/EYES.md); 0 = off
+
+
+@dataclass
 class Config:
     pins: Pins = field(default_factory=Pins)
     teensy: TeensyConfig = field(default_factory=TeensyConfig)
@@ -114,6 +119,7 @@ class Config:
     show: ShowConfig = field(default_factory=ShowConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
+    control: ControlConfig = field(default_factory=ControlConfig)
     captures: str = "captures"
 
     def path(self, p):

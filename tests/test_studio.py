@@ -49,7 +49,7 @@ def test_preview_renders_to_leds(studio):
     studio.preview("reveal")
     studio.tick()
     colors = studio.frame()
-    assert len(colors) == 34 and all(c.startswith("#") and len(c) == 7 for c in colors)
+    assert len(colors) == 32 and all(c.startswith("#") and len(c) == 7 for c in colors)
     assert studio.status()["scene"] == "reveal"
 
 
@@ -151,7 +151,7 @@ def test_http_api(studio):
 
     try:
         info = json.load(urllib.request.urlopen(base + "/api/info"))
-        assert "Comet" in info["effects"] and len(info["geometry"]) == 34
+        assert "Comet" in info["effects"] and len(info["geometry"]) == 32
         assert b"Spooky Studio" in urllib.request.urlopen(base + "/").read()
         assert post("/api/preview", {"name": "storm"}) == {"ok": True}
         with pytest.raises(urllib.error.HTTPError) as e:

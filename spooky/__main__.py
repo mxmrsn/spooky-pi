@@ -10,6 +10,7 @@ import logging
 import signal
 
 from . import config, hw
+from .control import ControlServer
 from .show import Show
 
 
@@ -29,11 +30,15 @@ def main():
     cfg = config.load(args.config)
     dev = hw.build(cfg, [s for s in args.sim.split(",") if s])
     signal.signal(signal.SIGTERM, _stop)
+    show = Show(cfg, dev)
+    control = ControlServer(show, cfg.control.port) if cfg.control.port else None
     try:
-        Show(cfg, dev).run()
+        show.run()
     except KeyboardInterrupt:
         pass
     finally:
+        if control is not None:
+            control.close()
         dev.close()
 
 

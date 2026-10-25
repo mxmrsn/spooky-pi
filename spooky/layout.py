@@ -1,7 +1,8 @@
 """The glasses as animations see them, and the mapping onto the physical LED chain.
 
-Animations work on *logical* pixels: left ring, right ring, then the two pupils.
-Each pixel carries its geometry seen from the front:
+Animations work on *logical* pixels: left ring, right ring, then whichever pupils are
+on the chain (none in the current build; a scene's pupils effect then has nothing to
+draw). Each pixel carries its geometry seen from the front:
 
     eye     0 = left, 1 = right
     angle   0..1 clockwise from 12 o'clock
@@ -52,11 +53,14 @@ class Layout:
         if counts.get("right_ring") != self.ring_size:
             raise ValueError("Both rings must have the same number of pixels")
         rs = self.ring_size
-        self.n = 2 * rs + 2
+        self.pupil_names = [p for p in ("left_pupil", "right_pupil") if p in counts]
+        n_pupils = len(self.pupil_names)
+        self.n = 2 * rs + n_pupils
 
-        eye = np.r_[np.zeros(rs), np.ones(rs), 0, 1].astype(int)
-        angle = np.r_[np.arange(rs) / rs, np.arange(rs) / rs, 0, 0]
-        pupil = np.r_[np.zeros(2 * rs, bool), True, True]
+        pupil_eyes = [0 if p.startswith("left") else 1 for p in self.pupil_names]
+        eye = np.r_[np.zeros(rs), np.ones(rs), pupil_eyes].astype(int)
+        angle = np.r_[np.arange(rs) / rs, np.arange(rs) / rs, np.zeros(n_pupils)]
+        pupil = np.r_[np.zeros(2 * rs, bool), np.ones(n_pupils, bool)]
         mangle = np.where(eye == 1, (1 - angle) % 1, angle)
         radius = np.where(pupil, 0.0, 1.0)
         x = np.take(EYE_X, eye) + radius * np.sin(2 * np.pi * angle)
@@ -66,12 +70,12 @@ class Layout:
         self.pupils = self.all.subset(pupil)
 
         self.perm = self._physical_order(cfg)
-        self.n_physical = len(self.perm)  # LEDs on the chain; the pupils can be left off
+        self.n_physical = len(self.perm)  # == n: every logical pixel is on the chain
 
     def _physical_order(self, cfg):
         """perm[p] = logical index shown by physical pixel p."""
         rs = self.ring_size
-        base = {"left_ring": 0, "right_ring": rs, "left_pupil": 2 * rs, "right_pupil": 2 * rs + 1}
+        base = {"left_ring": 0, "right_ring": rs, **{p: 2 * rs + k for k, p in enumerate(self.pupil_names)}}
         perm = []
         for name, count in cfg.chain:
             if name not in base:
@@ -84,7 +88,7 @@ class Layout:
             for k in range(count):
                 j = (k - off) % rs if cw else (off - k) % rs
                 perm.append(base[name] + j)
-        if len(set(perm)) != len(perm) or not set(range(2 * rs)) <= set(perm):
+        if sorted(perm) != list(range(self.n)):
             raise ValueError("LED chain must list each ring exactly once, and each pupil at most once")
         return np.array(perm)
 
