@@ -11,7 +11,8 @@ import math
 import time
 
 from . import config, scenes
-from .hw.leds import Leds, SpiStrip, TerminalStrip
+from .hw import open_strip
+from .hw.leds import Leds, TerminalStrip
 from .layout import Layout
 
 
@@ -28,7 +29,7 @@ def main():
         cfg.leds.brightness = args.brightness
     layout = Layout(cfg.leds)
     names = args.scenes or list(scenes.SCENES)
-    strip = TerminalStrip(layout) if args.sim else SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device)
+    strip = TerminalStrip(layout) if args.sim else open_strip(cfg)
     leds = Leds(layout, strip)
     period = 1 / cfg.leds.fps
     try:

@@ -1,24 +1,29 @@
 # Copy to spooky.toml and change only what you need. Defaults are in spooky/config.py.
 
 [leds]
-# Wiring order along the data line, starting at the Pi
-chain = [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
+# Wiring order along the data line, starting at the Teensy. Pupils are optional:
+# [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
+chain = [["left_ring", 16], ["right_ring", 16]]
 # Which physical LED of each ring sits at 12 o'clock (seen from the front), [left, right]
 ring_offset = [0, 0]
 ring_clockwise = [true, true]
 brightness = 0.4
-max_current_a = 1.7
+max_current_a = 2.0
+
+[teensy]
+enabled = true   # false: the Pi's own GPIO/SPI and the driver board (hardware/BOM.md)
 
 [camera]
 rotate = "ccw"
 gaze_mirror = true   # flip if the eyes look away from visitors
 
 [show]
+wake_on_face = true      # camera watches while idle; a face wakes the show (no PIRs needed)
 awake_timeout = 20.0
-face_hold = 4.0          # lock-on time before the countdown (3-5 s avoids false triggers)
+face_hold = 2.0          # lock-on time before the countdown; face_hold + countdown = 5 s to the photo
 hold_still_after = 1.0   # "hold still!" cue this far into the lock-on
 countdown = 3.0
-display_seconds = 12.0
+display_seconds = 12.5   # before/after stays up 2.5 s reveal + this = 15 s
 rearm = 6.0
 save_photos = true
 keep_photos = 1000

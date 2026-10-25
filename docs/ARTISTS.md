@@ -67,13 +67,13 @@ Built-in looks can't be changed or deleted, so you can't break anything. Save yo
 | Moment | What's happening |
 |---|---|
 | While waiting | Nobody around. Plays now and then |
-| Someone walks up | Motion sensor fires |
+| Someone walks up | Camera sees a face for half a second |
 | Face spotted | Camera finds a face; the eyes follow it |
-| Hold still! | 1 second into the 4-second lock-on |
+| Hold still! | 1 second into the lock-on (2 s, then the 3-second countdown) |
 | Countdown | 3-second countdown to the photo |
 | Camera click | Photo taken |
 | The reveal | Scary photo appears |
-| Photo on screen | While the photo stays up |
+| Photo on screen | While before and after stay up side by side (15 s) |
 
 ---
 
@@ -81,10 +81,10 @@ Built-in looks can't be changed or deleted, so you can't break anything. Save yo
 
 ![Show tab](img/studio_show.png)
 
-1. **▶ Start (pretend camera)**, or **▶ Start (real camera + sensors)** to use the real motion sensor and camera. The pretend camera uses earlier photos, so nobody has to stand in front of it.
+1. **▶ Start (pretend camera)**, or **▶ Start (real camera + sensors)** to use the real camera: stand in front of it to start a visit. The pretend camera uses earlier photos, so nobody has to stand in front of it.
 2. **🚶 Someone walks up**: the show wakes up.
 3. **🙂 Face appears**: the eyes lock on, "hold still!", countdown, snap, scary photo, scream.
-4. **Motion sensors (live)** at the top shows each sensor as a scrolling trace: up means it sees movement. Use it while adjusting the sensor's two knobs.
+4. **Motion sensors (live)** only appears if PIR sensors are fitted (there are none for now).
 5. The highlighted step shows where the show is. **What the screen shows** is the visitor's view.
 6. **■ Stop** when you're done (you need to stop the show to preview scenes again).
 

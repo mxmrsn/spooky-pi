@@ -46,9 +46,9 @@ class TerminalStrip:
         self._last = 0.0
         self._drawn = False
         self.status = ""
-        inv = np.empty_like(layout.perm)
-        inv[layout.perm] = np.arange(layout.n)
-        self.inverse = inv  # logical i -> physical index
+        inv = np.full(layout.n, -1)
+        inv[layout.perm] = np.arange(layout.n_physical)
+        self.inverse = inv  # logical i -> physical index, -1 if it isn't on the chain
         px = layout.all
         centre_col = np.where(px.eye == 0, self.COLS // 2, self.COLS + 3 + self.COLS // 2)
         dx = px.x - np.where(px.eye == 0, -1.25, 1.25)  # offset from the eye centre, -1..1
@@ -61,7 +61,7 @@ class TerminalStrip:
         if now - self._last < self.interval:
             return
         self._last = now
-        logical = physical_rgb[self.inverse].astype(float)
+        logical = np.where((self.inverse >= 0)[:, None], physical_rgb[self.inverse], 0).astype(float)
         # undo gamma/brightness roughly so dim colours are visible on a monitor
         cfg = self.layout.cfg
         screen = (np.clip(logical / 255 / max(cfg.brightness, 1e-3), 0, 1) ** (1 / cfg.gamma) * 255).astype(int)
@@ -92,7 +92,7 @@ class Leds:
 
     def __init__(self, layout, strip):
         self.layout, self.strip = layout, strip
-        self.last = np.zeros((layout.n, 3), np.uint8)
+        self.last = np.zeros((layout.n_physical, 3), np.uint8)
 
     def show(self, frame):
         self.last = self.layout.to_physical(frame)
@@ -104,6 +104,6 @@ class Leds:
 
     def close(self):
         try:
-            self.strip.write(np.zeros((self.layout.n, 3), np.uint8))
+            self.strip.write(np.zeros((self.layout.n_physical, 3), np.uint8))
         finally:
             self.strip.close()

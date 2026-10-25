@@ -66,6 +66,7 @@ class Layout:
         self.pupils = self.all.subset(pupil)
 
         self.perm = self._physical_order(cfg)
+        self.n_physical = len(self.perm)  # LEDs on the chain; the pupils can be left off
 
     def _physical_order(self, cfg):
         """perm[p] = logical index shown by physical pixel p."""
@@ -83,18 +84,19 @@ class Layout:
             for k in range(count):
                 j = (k - off) % rs if cw else (off - k) % rs
                 perm.append(base[name] + j)
-        if sorted(perm) != list(range(self.n)):
-            raise ValueError("LED chain must list each ring and pupil exactly once")
+        if len(set(perm)) != len(perm) or not set(range(2 * rs)) <= set(perm):
+            raise ValueError("LED chain must list each ring exactly once, and each pupil at most once")
         return np.array(perm)
 
     def to_physical(self, frame):
-        """Logical float RGB frame (n, 3) in 0..1 -> physical uint8 RGB (n, 3)."""
-        pwm = np.clip(frame, 0.0, 1.0) ** self.cfg.gamma * self.cfg.brightness
-        ma = pwm.sum() * MA_PER_CHANNEL + self.n * MA_IDLE
+        """Logical float RGB frame (n, 3) in 0..1 -> physical uint8 RGB (n_physical, 3)."""
+        pwm = (np.clip(frame, 0.0, 1.0) ** self.cfg.gamma * self.cfg.brightness)[self.perm]
+        idle = self.n_physical * MA_IDLE
+        ma = pwm.sum() * MA_PER_CHANNEL + idle
         budget = self.cfg.max_current_a * 1000
         if ma > budget:
-            pwm *= (budget - self.n * MA_IDLE) / (ma - self.n * MA_IDLE)
-        return np.round(pwm * 255).astype(np.uint8)[self.perm]
+            pwm *= (budget - idle) / (ma - idle)
+        return np.round(pwm * 255).astype(np.uint8)
 
     def estimate_current_a(self, physical):
-        return (physical.astype(float).sum() / 255 * MA_PER_CHANNEL + self.n * MA_IDLE) / 1000
+        return (physical.astype(float).sum() / 255 * MA_PER_CHANNEL + len(physical) * MA_IDLE) / 1000

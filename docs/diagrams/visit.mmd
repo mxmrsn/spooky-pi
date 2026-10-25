@@ -1,28 +1,26 @@
 sequenceDiagram
     autonumber
     actor V as Visitor
-    participant P as PIR sensors
+    participant C as Camera + face detector
     participant S as Show (state machine)
     participant G as LED glasses
     participant A as Speaker
-    participant C as Camera + face detector
     participant D as Display
 
-    V->>P: walks up
-    P->>S: motion
+    V->>C: walks up, face in view
+    C->>S: face held 0.5 s
     S->>G: awake scene (green comets)
     S->>A: "awaken" sound / boss line
-    S->>C: start watching
-    C->>S: face found
+    Note over S: eyes wake for 1.5 s
     S->>G: eyes follow the face, lock-on turns them red
     S->>A: "hold still!" (boss line)
-    S->>D: HOLD STILL! card
-    Note over S: face held 4 s
+    S->>D: HOLD STILL! over the live camera feed
+    Note over S: face held 2 s, then a 3 s countdown on screen
     S->>G: countdown (rings fill white)
     S->>G: flash
     C->>S: best face frame
     S->>S: ScarySmile (≈1.5 s, background thread)
-    S->>D: scary photo
+    S->>D: before and after, side by side
     S->>A: scream / boss line
     S->>G: strobe, then fire flicker
-    Note over S,D: photo stays 12 s, then back to idle
+    Note over S,D: up for 15 s, then back to the live camera feed

@@ -2,7 +2,8 @@
 
 `sim` is a set of device names to simulate: leds, pir, aim, audio, display, camera
 (or "all"). A real device that fails to start is logged and replaced, so the
-show keeps running with whatever works.
+show keeps running with whatever works. With [teensy] enabled the LEDs and PIRs
+go through the Teensy, and the aiming LED is always simulated.
 """
 
 import logging
@@ -15,6 +16,7 @@ from .display import FileDisplay, NullDisplay, PygameDisplay, StreamDisplay
 from .inputs import PirSensors, SimInputs
 from .leds import Leds, NullStrip, SpiStrip, TerminalStrip
 from .outputs import AimLed, LogPlayer, PygamePlayer, SimAim, SoundBank
+from .teensy import TeensyInput, TeensyStrip
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +52,22 @@ def _try(name, real, fallback):
         return fallback()
 
 
+def open_strip(cfg):
+    """The real LED chain: through the Teensy, or straight off the Pi's SPI."""
+    if cfg.teensy.enabled:
+        return TeensyStrip(cfg.teensy.port)
+    return SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device)
+
+
+def open_pirs(cfg):
+    """(labels, devices) for the real PIR sensors: the Teensy's inputs or Pi GPIO pins."""
+    if cfg.teensy.enabled:
+        pins = list(cfg.teensy.pir_pins)
+        return pins, [TeensyInput(i, cfg.teensy.port) for i in range(len(pins))]
+    from gpiozero import DigitalInputDevice
+    return list(cfg.pins.pir), [DigitalInputDevice(p, pull_up=False) for p in cfg.pins.pir]
+
+
 def build(cfg, sim=(), terminal_preview=None):
     sim = set(DEVICES) if "all" in sim else set(sim)
     unknown = sim - set(DEVICES)
@@ -65,8 +83,7 @@ def build(cfg, sim=(), terminal_preview=None):
     if "leds" in sim:
         strip = preview() if terminal_preview else NullStrip()
     else:
-        strip = _try("LEDs", lambda: SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device),
-                     preview if terminal_preview else NullStrip)
+        strip = _try("LEDs", lambda: open_strip(cfg), preview if terminal_preview else NullStrip)
     leds = Leds(layout, strip)
 
     sim_camera = None
@@ -81,12 +98,16 @@ def build(cfg, sim=(), terminal_preview=None):
         watcher = FaceWatcher(cam, FaceDetector(cfg.camera.detect_scale, cfg.camera.min_score))
 
     face_toggle = sim_camera.toggle_face if sim_camera else None
-    if "pir" in sim:
+    pir_pins = cfg.teensy.pir_pins if cfg.teensy.enabled else cfg.pins.pir
+    if "pir" in sim or not pir_pins:
         inputs = SimInputs(face_toggle)
     else:
-        inputs = _try("PIR sensors", lambda: PirSensors(cfg.pins.pir), lambda: SimInputs(face_toggle))
+        inputs = _try("PIR sensors", lambda: PirSensors(open_pirs(cfg)[1]), lambda: SimInputs(face_toggle))
 
-    aim = SimAim() if "aim" in sim else _try("aiming LED", lambda: AimLed(cfg.pins.aim_led), SimAim)
+    if "aim" in sim or cfg.teensy.enabled:
+        aim = SimAim()
+    else:
+        aim = _try("aiming LED", lambda: AimLed(cfg.pins.aim_led), SimAim)
     player = LogPlayer() if "audio" in sim else _try("audio", lambda: PygamePlayer(cfg.audio.volume), LogPlayer)
     sounds = SoundBank(cfg.path(cfg.audio.folder), player)
     voices = VoiceBank(cfg.path(cfg.audio.folder) / "voices", player, cfg.audio.voice_chance)
@@ -100,4 +121,6 @@ def build(cfg, sim=(), terminal_preview=None):
     else:
         display = NullDisplay()
 
+    if isinstance(display, StreamDisplay):
+        display.watcher = watcher  # live camera preview at :<stream_port>/camera
     return Devices(layout, leds, inputs, aim, sounds, display, watcher, sim_camera, voices)

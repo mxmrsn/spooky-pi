@@ -8,7 +8,7 @@ from spooky.hw import Devices
 from spooky.hw.camera import Sighting
 from spooky.hw.leds import Leds, NullStrip
 from spooky.layout import Layout
-from spooky.show import Show, State
+from spooky.show import CLOSER_TEXT, DEVELOP_TEXT, HOLD_TEXT, IDLE_TEXT, Show, State
 
 DT = 0.05
 
@@ -125,20 +125,24 @@ def test_full_scare_cycle(rig):
     run(show, clock, sc.face_hold)
     assert show.state is State.COUNTDOWN
 
+    assert dev.display.calls[-1] == ("feed", HOLD_TEXT, "3")  # countdown over the camera feed
     run(show, clock, sc.countdown)
     assert show.state is State.CAPTURE
+    assert dev.display.calls[-1] == ("flash",)
 
     run(show, clock, sc.flash + 2 * DT)
     assert show.state is State.REVEAL
-    shown = [c for c in dev.display.calls if c[0] == "show"]
-    assert len(shown) == 1 and shown[0][1].max() == 1  # the scare_fn output reached the display
+    names = [c[0] for c in dev.display.calls]
+    assert names[-2:] == ["still", "compare"] and dev.display.calls[-2][2] == DEVELOP_TEXT
+    before, after = dev.display.calls[-1][1:]
+    assert before.max() == 0 and after.max() == 1  # photo next to the scare_fn output
     assert not dev.watcher.enabled  # camera off while processing/revealing
 
     run(show, clock, sc.reveal)
     assert show.state is State.SHOWING
     run(show, clock, sc.display_seconds)
     assert show.state is State.IDLE
-    assert dev.display.calls[-1] == ("idle",)
+    assert dev.display.calls[-1] == ("feed", IDLE_TEXT)  # back to the camera feed
     assert sounds_played(dev) == ["awaken", "spotted", "hold_still", "countdown", "shutter", "scream", "outro"]
 
     # re-arm delay: motion right away is ignored
@@ -149,6 +153,47 @@ def test_full_scare_cycle(rig):
     dev.inputs.pending.append(1)
     run(show, clock, DT)
     assert show.state is State.AWAKE
+
+
+def test_face_wakes_it_without_motion(rig):
+    show, dev, clock, sc = rig
+    assert show.state is State.IDLE and dev.watcher.enabled  # camera watches while idle
+    dev.watcher.face = True
+    run(show, clock, sc.wake_face_hold / 2)
+    assert show.state is State.IDLE  # a glimpse isn't enough
+    run(show, clock, sc.wake_face_hold)
+    assert show.state is State.AWAKE
+    run(show, clock, show.entered + sc.awaken_time - 0.1 - clock.t)
+    assert show.state is State.AWAKE  # eyes finish waking before "spotted"
+    run(show, clock, 0.3)
+    assert show.state is State.WATCHING and show.face_since == show.entered  # lock-on starts from scratch
+    assert sounds_played(dev) == ["awaken", "spotted"]
+
+
+def test_visitor_who_stays_is_not_snapped_twice(rig):
+    show, dev, clock, sc = rig
+    dev.watcher.face = True
+    run(show, clock, sc.wake_face_hold + sc.awaken_time + sc.face_hold + sc.countdown + 1)
+    assert show.state in (State.REVEAL, State.SHOWING)
+    run(show, clock, sc.reveal + sc.display_seconds)
+    assert show.state is State.IDLE
+    run(show, clock, sc.rearm + 5)
+    assert show.state is State.IDLE  # same face still there: no second photo
+    dev.watcher.face = False
+    run(show, clock, sc.face_lost_grace + 0.5)
+    dev.watcher.face = True
+    run(show, clock, sc.wake_face_hold + 0.2)
+    assert show.state is State.AWAKE  # they left and came back
+
+
+def test_face_wake_can_be_turned_off(rig):
+    show, dev, clock, sc = rig
+    sc.wake_on_face = False
+    show._enter(State.IDLE, clock.t)
+    assert not dev.watcher.enabled
+    dev.watcher.face = True
+    run(show, clock, 2)
+    assert show.state is State.IDLE
 
 
 def test_face_lost_returns_to_awake_quietly(rig):
@@ -248,7 +293,7 @@ def test_voice_line_takes_over_leds_except_in_countdown(rig, tmp_path):
     assert show.overlay is None  # the countdown fill is never hidden
 
 
-def test_lock_on_says_hold_still_and_clears_card_if_they_leave(rig):
+def test_lock_on_says_hold_still_and_prompts_if_they_leave(rig):
     show, dev, clock, sc = rig
     dev.inputs.pending.append(0)
     dev.watcher.face = True
@@ -257,11 +302,22 @@ def test_lock_on_says_hold_still_and_clears_card_if_they_leave(rig):
     green = show.scene.gaze.col
     run(show, clock, sc.hold_still_after)
     assert "hold_still" in sounds_played(dev)
-    assert dev.display.calls[-1] == ("card", "HOLD STILL!")
+    assert dev.display.calls[-1] == ("feed", HOLD_TEXT)
     assert show.scene.gaze.col[0] > green[0]  # spot is turning red
-    assert show.state is State.WATCHING  # still locking on (4 s)
+    assert show.state is State.WATCHING  # still locking on
     dev.watcher.face = False
     run(show, clock, sc.face_lost_grace + 0.2)
     assert show.state is State.AWAKE
-    assert dev.display.calls[-1] == ("idle",)
+    assert dev.display.calls[-1] == ("feed", CLOSER_TEXT)
     assert sounds_played(dev).count("hold_still") == 1
+
+
+def test_step_closer_when_face_is_small(rig):
+    show, dev, clock, sc = rig
+    dev.inputs.pending.append(0)
+    dev.watcher.face = True
+    run(show, clock, 0.3)
+    assert show.state is State.WATCHING
+    sc.close_enough = 0.5  # the test face is a third of the frame wide
+    run(show, clock, DT)
+    assert dev.display.calls[-1] == ("feed", CLOSER_TEXT)

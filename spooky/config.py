@@ -17,23 +17,34 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @dataclass
 class Pins:
+    # Pi GPIO, used only when [teensy] enabled = false (the driver board in hardware/BOM.md)
     pir: tuple = (23, 24)  # BCM numbers; first is the sensor on the glasses' left as seen from the front
     aim_led: int = 17
     # NeoPixel data is SPI0 MOSI (GPIO10), selected by LedConfig.spi_bus/spi_device
 
 
 @dataclass
+class TeensyConfig:
+    # The LEDs and PIRs hang off a Teensy 4.1 on USB (firmware: teensy/). No aiming LED in this build.
+    enabled: bool = True
+    port: str = ""  # serial device; empty finds /dev/serial/by-id/*Teensyduino*
+    # Teensy pins with PIRs, as set in the firmware (2, 3); first is the glasses' left sensor.
+    # None fitted for now: a face in the camera wakes the show ([show] wake_on_face).
+    pir_pins: tuple = ()
+
+
+@dataclass
 class LedConfig:
-    # Order of the segments along the data line, starting at the Pi.
-    chain: list = field(default_factory=lambda: [
-        ["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]])
+    # Order of the segments along the data line, starting at the Teensy. The pupils are optional
+    # (not fitted for now); with them: left_ring, left_pupil, right_ring, right_pupil.
+    chain: list = field(default_factory=lambda: [["left_ring", 16], ["right_ring", 16]])
     # Physical index (within each ring) of the pixel at 12 o'clock, seen from the front: [left, right]
     ring_offset: list = field(default_factory=lambda: [0, 0])
     # Does the index increase clockwise, seen from the front? [left, right]
     ring_clockwise: list = field(default_factory=lambda: [True, True])
     brightness: float = 0.4  # global cap, 0..1
     gamma: float = 2.2
-    max_current_a: float = 1.7  # estimated LED current budget: 2 A USB brick minus aiming LED, PIRs, level shifter
+    max_current_a: float = 2.0  # estimated LED current budget: 2.5 A USB brick minus Teensy, PIRs, level shifter
     fps: int = 50
     spi_bus: int = 0
     spi_device: int = 0
@@ -53,14 +64,19 @@ class CameraConfig:
 
 @dataclass
 class ShowConfig:
+    wake_on_face: bool = True  # the camera watches while idle, and a face wakes the show (no PIRs needed)
+    wake_face_hold: float = 0.5  # a face must stay this long to wake it (skips one-frame false detections)
+    awaken_time: float = 1.0  # after a face wakes it, the eyes wake up this long before "spotted"
     awake_timeout: float = 20.0  # back to idle if no face appears for this long
-    face_hold: float = 4.0  # lock-on: eyes follow the face this long before the countdown (3-5 s avoids false triggers)
-    hold_still_after: float = 1.0  # "hold still!" cue + display card this far into the lock-on
+    # From lock-on to photo: face_hold + countdown = 5 s with the face in view the whole time
+    face_hold: float = 2.0  # lock-on: eyes follow the face this long before the countdown
+    hold_still_after: float = 1.0  # "hold still!" cue + on-screen prompt this far into the lock-on
+    close_enough: float = 0.18  # on-screen "Step closer" while the face is narrower than this share of the frame
     face_lost_grace: float = 1.5  # countdown aborts if the face is gone this long
     countdown: float = 3.0
     flash: float = 0.25
     reveal: float = 2.5  # strobe + scream after the photo appears
-    display_seconds: float = 12.0  # how long the scary photo stays up
+    display_seconds: float = 12.5  # before/after stays up reveal + display_seconds = 15 s
     rearm: float = 6.0  # ignore motion this long after a photo, so one visitor isn't snapped twice
     ambient_interval: list = field(default_factory=lambda: [45.0, 120.0])  # idle cackle every N..M s
     save_photos: bool = True
@@ -92,6 +108,7 @@ class DisplayConfig:
 @dataclass
 class Config:
     pins: Pins = field(default_factory=Pins)
+    teensy: TeensyConfig = field(default_factory=TeensyConfig)
     leds: LedConfig = field(default_factory=LedConfig)
     camera: CameraConfig = field(default_factory=CameraConfig)
     show: ShowConfig = field(default_factory=ShowConfig)

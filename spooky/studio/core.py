@@ -315,14 +315,17 @@ class Studio:
                 inputs = MonitorInputs(self.pir)  # real motion sensors (the button still works too)
             else:
                 inputs = SimInputs(sim_cam.toggle_face if sim_cam else None, read_stdin=False)
-            try:
-                aim = AimLed(cfg.pins.aim_led)
-            except Exception:
-                aim = SimAim()
+            aim = SimAim()
+            if not cfg.teensy.enabled:  # the aiming LED only exists on the old driver board
+                try:
+                    aim = AimLed(cfg.pins.aim_led)
+                except Exception:
+                    pass
             display = FileDisplay(cfg.display, root)
             if cfg.display.backend == "stream":  # also send it to the real display computer
                 try:
                     display = StreamDisplay(cfg.display, root)
+                    display.watcher = watcher
                 except OSError as e:
                     log.warning("display stream unavailable (%s); preview only", e)
             self.show_dev = Devices(

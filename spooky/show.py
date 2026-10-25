@@ -1,16 +1,26 @@
 """The show: a state machine driving LEDs, sounds, aiming LED, camera and display.
 
-    IDLE ──PIR──> AWAKE ──face──> WATCHING ──face held (lock-on)──> COUNTDOWN ──> CAPTURE
+    IDLE ─PIR/face─> AWAKE ──face──> WATCHING ──face held (lock-on)──> COUNTDOWN ──> CAPTURE
       ^             │ timeout        │ face lost / timeout     │ face lost
       │             v                v                         v
       ├──────── IDLE <────────── AWAKE <──────────────────── AWAKE
       │
       └── SHOWING <── REVEAL <── PROCESSING <── CAPTURE
 
+With [show] wake_on_face the camera also watches while IDLE, and a face that stays
+wake_face_hold seconds wakes the show; the eyes then wake for awaken_time before the
+lock-on starts. A visitor still standing there after their photo has to leave and come
+back to be snapped again.
+
+The screen shows the live (mirrored) camera feed with prompts while the camera is on
+(step closer / hold still / a countdown), a white flash for the photo, the photo while
+the scary version is made, then before and after side by side.
+
 step(now) does all the work, so tests drive it with a fake clock.
 """
 
 import logging
+import math
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +39,11 @@ PROCESS_TIMEOUT = 20.0
 FACE_FRESH = 0.5  # the countdown only starts if the face was seen this recently
 LOCK_FROM, LOCK_TO = color("toxic"), color("blood")  # eye spot colour over the lock-on
 HOLD_TEXT = "HOLD STILL!"
+IDLE_TEXT = "Step closer... if you dare"
+CLOSER_TEXT = "Step closer"
+LOOK_TEXT = "Look into the doctor's eyes"
+DEVELOP_TEXT = "Developing..."
+LIVE_STATES = {"IDLE", "AWAKE", "WATCHING", "COUNTDOWN"}  # the screen shows the camera feed
 
 
 class State(Enum):
@@ -69,15 +84,15 @@ class Show:
         self.last_activity = -1e9
         self.face_since = None
         self.face_seen = -1e9
+        self.woke_by_face = False
         self.job = None
         self.scary = None
         self.overlay = None  # (scene, start, end) while a voice line plays
         self.force_voice = False  # audition: always speak when a voice has a line
         self.told_hold = False  # "hold still!" already given during this lock-on
-        self.hold_card = False  # display is showing the HOLD STILL card
+        self.photo = None  # the frame being scared
         now = clock()
         self.next_ambient = now + random.uniform(*self.sc.ambient_interval)
-        self.dev.display.idle()
         self._enter(State.IDLE, now)
 
     # ------------------------------------------------------------------ plumbing
@@ -91,10 +106,12 @@ class Show:
             self.overlay = None
         if state is State.WATCHING:
             self.told_hold = False
-        if state in (State.IDLE, State.AWAKE) and self.hold_card:
-            self.dev.display.idle()  # visitor left mid lock-on
-            self.hold_card = False
+        if state is State.CAPTURE:
+            self.dev.display.flash()
         sound, aim, camera = STATE_SETUP[state]
+        if state is State.IDLE:
+            camera = self.sc.wake_on_face
+            self.face_since = None  # only a face that appears from now on can wake the show
         if sound and not quiet:
             self.cue(sound, now)
         self.dev.aim.set(aim)
@@ -151,18 +168,47 @@ class Show:
             self.last_activity = now
         handler = getattr(self, f"_{self.state.value}")
         handler(now, fired)
+        self._screen(now)
         self.render(now)
+
+    def _screen(self, now):
+        """Prompt over the live camera feed in the states that show it."""
+        if self.state.name not in LIVE_STATES:
+            return
+        if self.state is State.COUNTDOWN:
+            left = max(1, math.ceil(self.sc.countdown - self.elapsed(now)))
+            self.dev.display.feed(HOLD_TEXT, str(left))
+        elif self.state is State.WATCHING:
+            self.dev.display.feed(CLOSER_TEXT if self._too_far() else HOLD_TEXT if self.told_hold else LOOK_TEXT)
+        elif self.state is State.AWAKE:
+            self.dev.display.feed(CLOSER_TEXT)
+        else:
+            self.dev.display.feed(IDLE_TEXT)
+
+    def _too_far(self):
+        s = self.dev.watcher.latest() if self.dev.watcher else None
+        if s is None or not s.has_face:
+            return False
+        biggest = s.faces[:, 2].max()
+        return biggest / s.frame.shape[1] < self.sc.close_enough
 
     def render(self, now):
         scene, t = self.active_scene(now)
         self.dev.leds.show(scene.render(t, self.dev.layout))
         fps = f" cam {self.dev.watcher.fps:.0f} fps" if self.dev.watcher else ""
         self.dev.leds.set_status(f"{self.state.name:<10} {self.elapsed(now):5.1f} s{fps}   "
-                                 "(1/2 = PIR, f = face, q = quit)")
+                                 "(1/2 = motion, f = face, q = quit)")
 
     def _idle(self, now, fired):
-        if fired and now >= self.rearm_until:
-            self.face_since = None
+        face_wake = False
+        if self.sc.wake_on_face and self.dev.watcher is not None:
+            self._update_face(now)
+            face_wake = (self.face_since is not None and self.face_since >= self.rearm_until
+                         and now - self.face_since >= self.sc.wake_face_hold)
+        if face_wake or (fired and now >= self.rearm_until):
+            self.woke_by_face = face_wake
+            if not face_wake:
+                self.face_since = None
             self._enter(State.AWAKE, now)
         elif now >= self.next_ambient:
             self.cue("ambient", now)
@@ -176,6 +222,11 @@ class Show:
             return
         self._update_face(now)
         if self.face_since is not None:
+            if self.woke_by_face:  # let the eyes finish waking up, then lock on from scratch
+                if self.elapsed(now) < self.sc.awaken_time:
+                    return
+                self.woke_by_face = False
+                self.face_since = now
             self._enter(State.WATCHING, now)
         elif now - self.last_activity > self.sc.awake_timeout:
             self._enter(State.IDLE, now)
@@ -192,8 +243,6 @@ class Show:
         if not self.told_hold and fresh and held >= self.sc.hold_still_after:
             self.told_hold = True
             self.cue("hold_still", now)
-            self.dev.display.card(HOLD_TEXT)
-            self.hold_card = True
         if fresh and held >= self.sc.face_hold:
             self._enter(State.COUNTDOWN, now)
 
@@ -220,8 +269,10 @@ class Show:
             log.info("no face frame to capture")
             self._enter(State.AWAKE, now, quiet=True)
             return
+        self.photo = s.frame
         self.job = self.executor.submit(self._process, s.frame)
         self._enter(State.PROCESSING, now)
+        self.dev.display.still(s.frame, DEVELOP_TEXT)
 
     def _processing(self, now, fired):
         if self.job.done():
@@ -231,7 +282,7 @@ class Show:
                 log.exception("scary processing failed")
                 self._enter(State.IDLE, now)
                 return
-            self.dev.display.show(self.scary)
+            self.dev.display.compare(self.photo, self.scary)
             self._enter(State.REVEAL, now)
         elif self.elapsed(now) > PROCESS_TIMEOUT:
             log.error("scary processing timed out")
@@ -243,7 +294,6 @@ class Show:
 
     def _showing(self, now, fired):
         if self.elapsed(now) >= self.sc.display_seconds:
-            self.dev.display.idle()
             self.rearm_until = now + self.sc.rearm
             self._enter(State.IDLE, now)
 

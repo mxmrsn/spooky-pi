@@ -17,19 +17,21 @@ Play with the glasses, sounds and show from a browser, with nothing to install: 
 
 ## A visit, start to finish
 
-![Sequence of a visit: PIR, show, LEDs, speaker, camera, display](docs/img/visit.png)
+![Sequence of a visit: camera, show, LEDs, speaker, display](docs/img/visit.png)
 
 ## Hardware
 
 ![Hardware block diagram](docs/img/hardware.png)
 
-| Signal | GPIO | Pin | | Power | Source |
-|---|---|---|---|---|---|
-| LED data (SPI MOSI) | 10 | 19 | | Pi + camera | Pi 5 V / 3 A supply |
-| Aiming LED gate | 17 | 11 | | LEDs, aiming LED, PIRs, level shifter | 5 V USB brick |
-| PIR 1 / PIR 2 | 23 / 24 | 16 / 18 | | Fan | Pi pins 4/6 |
+The LED glasses hang off a **Teensy 4.1** on the Pi's USB, so nothing plugs into the Pi's GPIO header. The Pi does all the animation and sends finished frames; the Teensy copies them onto the LEDs. **The camera wakes the show:** it watches while idle, and a face that stays half a second starts a visit. There are no PIRs, pupil LEDs or aiming LED in this build (the firmware still reads PIRs on pins 2/3 if they're ever fitted: set `[teensy] pir_pins = [2, 3]`).
 
-Wiring, connectors and parts list: **[hardware/BOM.md](hardware/BOM.md)**. The grounds are shared, but the Pi's 5 V never touches the board.
+| Signal | Teensy pin | | Power | Source |
+|---|---|---|---|---|
+| LED data (2 × 16-LED rings, one chain) | 1 | | Pi + camera | Pi 5 V / 3 A supply |
+| (optional PIR 1 / PIR 2) | 2 / 3 | | Teensy (VIN) and LEDs | 5 V / 2.5 A USB brick |
+| On-board LED: 1 Hz blink = running, 4 Hz = frames arriving | 13 | | Fan | Pi pins 4/6 |
+
+Cut the Teensy's VUSB–VIN pad so the brick, not the Pi, powers it; the grounds are shared through USB. Flash the firmware with `bash scripts/teensy-flash.sh` (after `pi-setup.sh`). Wiring details and the older GPIO driver board (`[teensy] enabled = false`): **[hardware/BOM.md](hardware/BOM.md)**.
 
 ### Display: i.MX 8M Plus over Ethernet
 
@@ -50,16 +52,16 @@ The rules that hold it together:
 
 <img src="docs/img/states.png" alt="Show state machine" width="300" align="right">
 
-| State | LED scene | Sound event | Aiming LED | Camera |
+| State | LED scene | Sound event | Screen | Camera |
 |---|---|---|---|---|
-| IDLE | `idle` | `ambient` every 45–120 s | off | off |
-| AWAKE | `awake` | `awaken` | pulse | on |
-| WATCHING | `watching`: eyes follow you, turn red as they lock on (4 s) | `spotted`, then `hold_still` at 1 s (display: HOLD STILL!) | on | on |
-| COUNTDOWN | `countdown` | `countdown` | blink | on |
-| CAPTURE | `flash` | `shutter` | off | on |
-| PROCESSING | `processing` | | off | off |
-| REVEAL | `reveal` | `scream` | blink | off |
-| SHOWING | `showing` | `outro` | off | off |
+| IDLE | `idle` | `ambient` every 45–120 s | live feed: "Step closer... if you dare" | on: a face held 0.5 s wakes it |
+| AWAKE | `awake` (1 s before lock-on) | `awaken` | live feed: "Step closer" | on |
+| WATCHING | `watching`: eyes follow you, turn red as they lock on (2 s) | `spotted`, then `hold_still` at 1 s | live feed: "Step closer" if far, else "HOLD STILL!" | on |
+| COUNTDOWN | `countdown` | `countdown` | live feed with a big 3, 2, 1 | on |
+| CAPTURE | `flash` | `shutter` | white flash | on |
+| PROCESSING | `processing` | | the photo: "Developing..." | off |
+| REVEAL | `reveal` | `scream` | before and after, side by side | off |
+| SHOWING | `showing` | `outro` | before and after (15 s with REVEAL) | off |
 
 The timings come from `[show]` in `spooky.toml`. Each LED scene is pictured in the gallery at the top.
 
@@ -77,7 +79,7 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 |---|---|
 | Open the artist Studio | Double-click `launchers/Start Spooky Studio.*`, or on the Pi: `bash scripts/studio-ctl.sh start` (also `stop`, `status`, `log`) |
 | Run the show | `python -m spooky` |
-| Run it with no hardware | `python -m spooky --sim all` (type `1`/`2` = PIR, `f` = face, `q` = quit) |
+| Run it with no hardware | `python -m spooky --sim all` (type `f` = face, `1`/`2` = motion, `q` = quit) |
 | Simulate only some parts | `python -m spooky --sim leds,pir` |
 | Preview LED scenes | `python -m spooky.demo [scene …] [--sim] [--brightness 0.1]` |
 | Check the sound library | `python -m spooky.audition list` |
@@ -87,7 +89,9 @@ The countdown and flash scenes are never replaced, so visitors always see the ti
 | Test clips before real ones | `python tools/make_placeholders.py` (`--clean` removes them) |
 | Focus the camera | `python tools/focus_view.py`, then open `http://spooky-pi.local:8000` |
 | Camera-only check | `python tools/face_trigger.py` |
-| Check / tune the PIR sensors | Studio → 🎬 Show → *Motion sensors (live)* scope, or `python tools/pir_test.py` |
+| Check the LED chain | `python tools/led_test.py` (Studio/show stopped) |
+| Check / tune PIR sensors, if fitted | `python tools/pir_scope.py` (live traces in a browser) or `python tools/pir_test.py` |
+| Flash the Teensy firmware | `bash scripts/teensy-flash.sh` (from your PC; needs arduino-cli + the Teensy core) |
 | Run tests | `python -m pytest` (also works on Windows) |
 | Update the README figures | `python tools/render_scenes.py` (LED gallery), `python tools/render_diagrams.py` (diagrams; on a PC with Chrome or Edge) |
 
@@ -123,7 +127,7 @@ ssh -t spooky-pi@spooky-pi.local "sudo bash ~/spooky/scripts/pi-setup.sh"
 ![Development workflow: PC, GitHub, Pi](docs/img/dev.png)
 
 - **First time:** run `./deploy.sh --setup` (Git Bash). It creates the venv and installs `requirements.txt`.
-- **Python:** 3.11+ locally, 3.13 on the Pi. `spidev`, `gpiozero` and `pygame` come with Raspberry Pi OS.
+- **Python:** 3.11+ locally, 3.13 on the Pi. `spidev`, `gpiozero`, `pyserial` and `pygame` come with Raspberry Pi OS.
 - **Diagrams:** the source for each diagram is in `docs/diagrams/*.mmd` (Mermaid text). After editing, rerun `tools/render_diagrams.py` and commit the regenerated PNG/SVG in `docs/img/`.
 - **Hardware bring-up:** follow the checklist at the bottom of [hardware/BOM.md](hardware/BOM.md), after running `pi-setup.sh` once.
 - **SD card backup:** see [docs/SD-BACKUP.md](docs/SD-BACKUP.md). `tools/shrink-image.sh` makes the image fit a 32 GB card.

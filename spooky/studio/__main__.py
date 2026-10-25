@@ -13,9 +13,10 @@ import socket
 import threading
 
 from .. import config
+from ..hw import open_pirs, open_strip
 from ..hw.camera import quiet_opencv
 from ..hw.inputs import PirMonitor
-from ..hw.leds import NullStrip, SpiStrip
+from ..hw.leds import NullStrip
 from ..hw.outputs import LogPlayer, PygamePlayer
 from ..layout import Layout
 from .core import RecordingLeds, Studio
@@ -41,7 +42,7 @@ def main():
     strip = NullStrip()
     if not args.sim:
         try:
-            strip = SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device)
+            strip = open_strip(cfg)
         except Exception as e:
             log.warning("LEDs unavailable (%s): on-screen glasses only", e)
     player = LogPlayer()
@@ -52,9 +53,9 @@ def main():
             log.warning("audio unavailable (%s): sounds are silent", e)
 
     pir = None
-    if not args.sim:
+    if not args.sim and (cfg.teensy.pir_pins if cfg.teensy.enabled else cfg.pins.pir):
         try:
-            pir = PirMonitor(cfg.pins.pir)
+            pir = PirMonitor(*open_pirs(cfg))
         except Exception as e:
             log.warning("motion sensors unavailable (%s): pretend sensors only", e)
 

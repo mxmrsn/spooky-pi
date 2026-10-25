@@ -7,16 +7,17 @@ import time
 
 
 class PirSensors:
-    """PIR modules on GPIO. poll() returns the indices of sensors that fired since last call."""
+    """PIR modules. poll() returns the indices of sensors that fired since last call.
 
-    def __init__(self, pins):
-        from gpiozero import MotionSensor
+    `devices` are shaped like gpiozero's DigitalInputDevice: Pi GPIO pins or the
+    Teensy's inputs (see hw.open_pirs).
+    """
+
+    def __init__(self, devices):
         self._events = queue.SimpleQueue()
-        self.sensors = []
-        for i, pin in enumerate(pins):
-            s = MotionSensor(pin)
-            s.when_motion = lambda i=i: self._events.put(i)
-            self.sensors.append(s)
+        self.sensors = list(devices)
+        for i, s in enumerate(self.sensors):
+            s.when_activated = lambda i=i: self._events.put(i)
 
     def poll(self):
         fired = []
@@ -25,7 +26,7 @@ class PirSensors:
         return fired
 
     def active(self):
-        return any(s.motion_detected for s in self.sensors)
+        return any(s.value for s in self.sensors)
 
     def close(self):
         for s in self.sensors:
@@ -35,9 +36,9 @@ class PirSensors:
 class PirMonitor:
     """Owns the PIR pins and records their levels for the Studio's live scope.
 
-    `devices` are objects with `.value` and `when_activated` / `when_deactivated`
-    (gpiozero DigitalInputDevice); tests pass fakes. sample() is called from the
-    Studio's LED loop (50 Hz); edges arrive on gpiozero's thread.
+    `pins` label the sensors. `devices` are objects with `.value` and `when_activated` /
+    `when_deactivated` (gpiozero DigitalInputDevice, or the Teensy's inputs); tests pass fakes. sample() is called from the
+    Studio's LED loop (50 Hz); edges arrive on gpiozero's (or the Teensy link's) thread.
     """
 
     WINDOW = 15.0  # seconds of trace kept

@@ -7,14 +7,17 @@ from spooky.hw.leds import BIT0, BIT1, RESET_BYTES, encode
 from spooky.layout import Layout
 
 
-def test_default_chain_order():
-    lay = Layout(LedConfig())
+PUPILS = [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
+
+
+def test_chain_order_with_pupils():
+    lay = Layout(LedConfig(chain=PUPILS))
     # left ring, left pupil, right ring, right pupil along the wire
     assert list(lay.perm) == list(range(16)) + [32] + list(range(16, 32)) + [33]
 
 
 def test_ring_offset_and_direction():
-    cfg = LedConfig(ring_offset=[4, 0], ring_clockwise=[True, False])
+    cfg = LedConfig(chain=PUPILS, ring_offset=[4, 0], ring_clockwise=[True, False])
     lay = Layout(cfg)
     assert lay.perm[4] == 0  # physical pixel 4 of the left ring sits at 12 o'clock
     assert lay.perm[5] == 1  # and the index runs clockwise
@@ -22,9 +25,20 @@ def test_ring_offset_and_direction():
     assert right[0] == 0 and right[1] == 15  # anticlockwise wiring on the right ring
 
 
+def test_default_chain_has_no_pupils():
+    lay = Layout(LedConfig())
+    assert lay.n == 34 and lay.n_physical == 32 and list(lay.perm) == list(range(32))
+    frame = np.zeros((34, 3))
+    frame[32:] = 1.0  # pupils lit in the scene, but not on the chain
+    assert lay.to_physical(frame).shape == (32, 3) and not lay.to_physical(frame).any()
+
+
 def test_bad_chain_rejected():
-    with pytest.raises(ValueError):
-        Layout(LedConfig(chain=[["left_ring", 16], ["right_ring", 16], ["left_pupil", 1]]))
+    for chain in ([["left_ring", 16], ["right_ring", 16], ["left_pupil", 1], ["left_pupil", 1]],
+                  [["left_ring", 16], ["left_ring", 16]],
+                  [["left_ring", 16], ["right_ring", 16], ["nose", 1]]):
+        with pytest.raises(ValueError):
+            Layout(LedConfig(chain=chain))
 
 
 def test_mirrored_angle_is_symmetric_about_nose():

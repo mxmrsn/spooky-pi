@@ -17,7 +17,8 @@ import time
 from pathlib import Path
 
 from . import audio, config, hw, scenes
-from .hw.leds import Leds, SpiStrip, TerminalStrip
+from .hw import open_strip
+from .hw.leds import Leds, TerminalStrip
 from .audio import SOUND_EXTS
 from .hw.outputs import LogPlayer, PygamePlayer
 from .layout import Layout
@@ -91,7 +92,7 @@ def _leds(cfg, sim):
     if sim:
         return Leds(layout, TerminalStrip(layout))
     try:
-        return Leds(layout, SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device))
+        return Leds(layout, open_strip(cfg))
     except Exception as e:
         print(f"LEDs unavailable ({e}); drawing in the terminal", file=sys.stderr)
         return Leds(layout, TerminalStrip(layout))

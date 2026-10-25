@@ -148,6 +148,10 @@ class FaceWatcher:
     def disable(self):
         self._enabled.clear()
 
+    @property
+    def enabled(self):
+        return self._enabled.is_set()
+
     def latest(self):
         with self._lock:
             return self._latest
