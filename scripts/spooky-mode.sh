@@ -6,9 +6,12 @@
 #   bash ~/spooky/scripts/spooky-mode.sh show      event: the real show
 #   bash ~/spooky/scripts/spooky-mode.sh off       neither
 #   bash ~/spooky/scripts/spooky-mode.sh status    what's running / starts at boot
-#   bash ~/spooky/scripts/spooky-mode.sh restart   restart whichever is running (after ./deploy.sh)
+#   bash ~/spooky/scripts/spooky-mode.sh restart   restart whichever is running (after ./deploy.sh;
+#                                                  also reinstalls the service files)
 #   bash ~/spooky/scripts/spooky-mode.sh log [N]   last N log lines of whichever is running
 #   bash ~/spooky/scripts/spooky-mode.sh install   (re)install the service files
+#   bash ~/spooky/scripts/spooky-mode.sh kiosk on|off   the visitor screen full-screen on the Pi's
+#                                                  own HDMI, now and at every login
 set -u
 cd "$(dirname "$0")/.."
 UNITS=(spooky-studio spooky-show)
@@ -28,7 +31,7 @@ stray() {
 }
 
 switch() {  # switch <unit to run, or none>
-  [ -f ~/.config/systemd/user/spooky-studio.service ] || install
+  install  # pick up any changed service files
   for u in "${UNITS[@]}"; do
     if [ "$u" != "$1" ]; then $SC disable --now "$u" 2>/dev/null; fi
   done
@@ -48,6 +51,22 @@ case "${1:-status}" in
   show) switch spooky-show ;;
   off) switch none ;;
   install) install; echo "Service files installed." ;;
+  kiosk)
+    AUTOSTART=~/.config/autostart/spooky-kiosk.desktop
+    case "${2:-}" in
+      on)
+        mkdir -p ~/.config/autostart
+        sed "s|@HOME@|$HOME|" scripts/spooky-kiosk.desktop > "$AUTOSTART"
+        if ! pgrep -f scripts/kiosk.sh >/dev/null; then
+          WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/$(id -u) setsid -f bash scripts/kiosk.sh >/dev/null 2>&1
+        fi
+        echo "Kiosk on: the visitor screen fills the Pi's HDMI, now and at every login." ;;
+      off)
+        rm -f "$AUTOSTART"
+        pkill -f scripts/kiosk.sh; pkill -f "chromium.*--kiosk"
+        echo "Kiosk off." ;;
+      *) echo "kiosk: $([ -f "$AUTOSTART" ] && echo on || echo off)   (usage: $0 kiosk on|off)" ;;
+    esac ;;
   log)
     for u in "${UNITS[@]}"; do
       if $SC is-active --quiet "$u"; then
@@ -56,12 +75,14 @@ case "${1:-status}" in
       fi
     done ;;
   restart)
+    install
     for u in "${UNITS[@]}"; do
       if $SC is-active --quiet "$u"; then $SC restart "$u" && echo "Restarted $u"; fi
     done ;;
   status)
     for u in "${UNITS[@]}"; do
       printf "%-15s now: %-9s at boot: %s\n" "$u" "$($SC is-active "$u" 2>/dev/null)" "$($SC is-enabled "$u" 2>/dev/null)"
-    done ;;
-  *) echo "usage: $0 studio|show|off|status|restart|log|install"; exit 64 ;;
+    done
+    printf "%-15s %s\n" "HDMI kiosk" "$([ -f ~/.config/autostart/spooky-kiosk.desktop ] && echo on || echo off)" ;;
+  *) echo "usage: $0 studio|show|off|status|restart|log|install|kiosk on|off"; exit 64 ;;
 esac

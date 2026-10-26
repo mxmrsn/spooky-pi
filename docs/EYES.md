@@ -84,6 +84,6 @@ Or use the helper (standard library only): `python tools/eyes.py rage --seconds 
 ## Running and testing
 
 - On the Pi: `bash ~/spooky/scripts/spooky-mode.sh show` (or `studio`, `off`, `status`, `log`).
-- Visitor screen: `http://spooky-pi.local:8090/`. Camera with face boxes: `/camera`.
+- Visitor screen: `http://spooky-pi.local:8090/`. Camera with face boxes: `/camera`. On the Pi's own HDMI: `spooky-mode.sh kiosk on`.
 - Without hardware: `python -m spooky --sim all`. Type `f` for a face, `q` to quit. The control API works there too, on `localhost:8070`.
 - Tests: `python -m pytest`.

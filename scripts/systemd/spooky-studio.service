@@ -5,6 +5,8 @@ After=pipewire.service
 
 [Service]
 WorkingDirectory=%h/spooky
+ExecStartPre=/bin/bash %h/spooky/scripts/wait-for-hardware.sh 45
+TimeoutStartSec=90
 ExecStart=%h/spooky/.venv/bin/python -m spooky.studio --port 8080
 Restart=on-failure
 RestartSec=3

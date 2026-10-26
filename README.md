@@ -2,7 +2,7 @@
 
 A Halloween photo booth on a Raspberry Pi 4. LED "glasses" (two 16-LED rings) watch for a face. When someone steps up, the eyes lock on, a countdown runs on screen, and the camera takes their photo. The screen then shows it next to a scary version for 15 s, and the booth goes back to waiting.
 
-**Hardware:** a Pi 4 runs everything. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings. An i.MX 8M Plus shows the screen, which the Pi streams to it over Ethernet.
+**Hardware:** a Pi 4 runs everything. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings. The visitor screen is a web page the Pi serves on port 8090: show it on the Pi's own HDMI (kiosk), or on an i.MX 8M Plus over Ethernet.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ Assumes the hardware is connected and powered, and you can `ssh spooky-pi@spooky
    ```
    Leave out `--setup` after the first time.
 
-2. **Start the show.** It also starts at boot from then on:
+2. **Start the show.** From then on it also starts by itself whenever the Pi powers up, after waiting up to 45 s for the Teensy and the camera:
    ```bash
    ssh spooky-pi@spooky-pi.local "bash ~/spooky/scripts/spooky-mode.sh show"
    ```
@@ -42,6 +42,7 @@ Watch it from the logs with `ssh spooky-pi@spooky-pi.local "bash ~/spooky/script
 | Push code changes to the Pi | `./deploy.sh`, then `ssh spooky-pi@spooky-pi.local "bash ~/spooky/scripts/spooky-mode.sh restart"` |
 | See what's running | `spooky-mode.sh status` (on the Pi) |
 | Stop it | `spooky-mode.sh off` |
+| Show the visitor screen on the Pi's own HDMI | `spooky-mode.sh kiosk on` (full-screen browser, also at every login; `kiosk off` to stop) |
 | Drive the eyes from your code | HTTP API on port 8070: see [docs/EYES.md](docs/EYES.md), or `python tools/eyes.py rage --seconds 5` |
 | Hear the Pi's audio on your PC | `python tools/listen.py` (needs `pip install sounddevice`) |
 | Run without any hardware | `python -m spooky --sim all` (type `f` for a face, `q` to quit) |

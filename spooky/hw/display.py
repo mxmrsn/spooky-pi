@@ -237,9 +237,21 @@ class FileDisplay(_Base):
 
 
 VIEWER = b"""<!doctype html><title>spooky display</title>
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}
 img{width:100vw;height:100vh;object-fit:contain}</style>
-<img src="/stream.mjpg" onerror="setTimeout(()=>location.reload(),2000)">"""
+<img id="s" src="/stream.mjpg">
+<script>
+// Kiosk-proof: if the show restarts, keep checking and reattach the stream once it's back.
+const img = document.getElementById("s");
+let down = false;
+img.onerror = () => { down = true; };
+setInterval(async () => {
+  try {
+    await fetch("/", {cache: "no-store"});
+    if (down) { down = false; img.src = "/stream.mjpg?t=" + Date.now(); }
+  } catch (e) { down = true; }
+}, 2000);
+</script>"""
 
 
 CAMERA_VIEWER = b"""<!doctype html><title>spooky camera</title>
