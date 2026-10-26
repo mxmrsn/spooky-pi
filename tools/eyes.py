@@ -6,6 +6,7 @@
     python tools/eyes.py auto                back to the show's own eye states
     python tools/eyes.py --wake              start a visit
     python tools/eyes.py --reset             drop the visit, back to IDLE
+    python tools/eyes.py --imx reveal        tell the i.MX to play its "reveal" animation
 
 --host defaults to spooky-pi.local:8070 (or $SPOOKY_CONTROL). Standard library only.
 """
@@ -37,21 +38,24 @@ def main():
     ap.add_argument("--seconds", type=float, help="hold it this long (default: until cleared)")
     ap.add_argument("--wake", action="store_true", help="start a visit")
     ap.add_argument("--reset", action="store_true", help="drop the visit, back to IDLE")
+    ap.add_argument("--imx", metavar="ANIMATION", help="tell the i.MX to play this animation")
     ap.add_argument("--host", default=os.environ.get("SPOOKY_CONTROL", "spooky-pi.local:8070"))
     args = ap.parse_args()
     base = "http://" + args.host
 
     if args.wake or args.reset:
         call(base, "/show", {"action": "wake" if args.wake else "reset"})
+    if args.imx:
+        call(base, "/imx", {"animation": args.imx})
     if args.state:
         call(base, "/eyes", {"state": None if args.state == "auto" else args.state, "seconds": args.seconds})
-    if args.state or args.wake or args.reset:
+    if args.state or args.wake or args.reset or args.imx:
         time.sleep(0.1)  # commands apply on the show's next tick
     s = call(base, "/eyes")
     held = s["override"]
     left = f" for {held['seconds_left']} s more" if held and held["seconds_left"] is not None else ""
     print(f"show: {s['show_state']}   eyes: {s['eyes']}" + (f" (held{left})" if held else " (the show's)"))
-    if not (args.state or args.wake or args.reset):
+    if not (args.state or args.wake or args.reset or args.imx):
         print("eye states:", ", ".join(s["eye_states"]))
         print("show uses: " + ", ".join(f"{k}={v}" for k, v in s["show_eye_states"].items()))
 

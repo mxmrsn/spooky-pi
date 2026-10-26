@@ -7,4 +7,5 @@ flowchart LR
     TEENSY["Teensy 4.1<br/>spooky_teensy firmware"]
     TEENSY -- "pin 1" --> RING["LED glasses<br/>2 × 16-LED rings, one chain<br/>32 × WS2812B"]
     PI -- "3.5 mm" --> SPK["Powered speaker"]
-    PI -- "Ethernet switch<br/>MJPEG stream :8090" --> DISP["i.MX 8M Plus · Yocto<br/>+ its display"]
+    PI -- "HDMI0 · kiosk" --> MON["Pi's monitor<br/>camera, countdown, before/after"]
+    PI -- "Ethernet · UDP triggers :5005" --> IMX["i.MX 8M Plus · Yocto<br/>own display, own animations"]

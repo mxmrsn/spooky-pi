@@ -1,1 +1,1 @@
-"""Evil doctor Halloween installation: PIR wake-up, face-triggered scary photos, LED glasses."""
+"""Evil doctor Halloween installation: face-triggered scary photos, LED glasses, i.MX animations."""

@@ -1,9 +1,9 @@
 """Builds the hardware, falling back to simulated or null devices.
 
-`sim` is a set of device names to simulate: leds, pir, aim, audio, display, camera
-(or "all"). A real device that fails to start is logged and replaced, so the
-show keeps running with whatever works. With [teensy] enabled the LEDs and PIRs
-go through the Teensy, and the aiming LED is always simulated.
+`sim` is a set of device names to simulate: leds, aim, audio, display, camera, imx
+(or "all"). A real device that fails to start is logged and replaced, so the show
+keeps running with whatever works. With [teensy] enabled the LEDs go through the
+Teensy, and the aiming LED is always simulated.
 """
 
 import logging
@@ -13,14 +13,15 @@ from ..layout import Layout
 from ..voices import VoiceBank
 from .camera import Camera, FaceDetector, FaceWatcher, SimCamera, quiet_opencv
 from .display import FileDisplay, NullDisplay, PygameDisplay, StreamDisplay
-from .inputs import PirSensors, SimInputs
+from .imx import ImxLink, LogImx
+from .inputs import SimInputs
 from .leds import Leds, NullStrip, SpiStrip, TerminalStrip
 from .outputs import AimLed, LogPlayer, PygamePlayer, SimAim, SoundBank
-from .teensy import TeensyInput, TeensyStrip
+from .teensy import TeensyStrip
 
 log = logging.getLogger(__name__)
 
-DEVICES = ("leds", "pir", "aim", "audio", "display", "camera")
+DEVICES = ("leds", "aim", "audio", "display", "camera", "imx")
 
 
 @dataclass
@@ -34,9 +35,10 @@ class Devices:
     watcher: FaceWatcher | None
     sim_camera: SimCamera | None = None
     voices: VoiceBank | None = None
+    imx: object = None  # animation triggers for the i.MX, or None
 
     def close(self):
-        for d in (self.watcher, self.leds, self.inputs, self.aim, self.sounds, self.display):
+        for d in (self.watcher, self.leds, self.inputs, self.aim, self.sounds, self.display, self.imx):
             if d is not None:
                 try:
                     d.close()
@@ -57,15 +59,6 @@ def open_strip(cfg):
     if cfg.teensy.enabled:
         return TeensyStrip(cfg.teensy.port)
     return SpiStrip(cfg.leds.spi_bus, cfg.leds.spi_device)
-
-
-def open_pirs(cfg):
-    """(labels, devices) for the real PIR sensors: the Teensy's inputs or Pi GPIO pins."""
-    if cfg.teensy.enabled:
-        pins = list(cfg.teensy.pir_pins)
-        return pins, [TeensyInput(i, cfg.teensy.port) for i in range(len(pins))]
-    from gpiozero import DigitalInputDevice
-    return list(cfg.pins.pir), [DigitalInputDevice(p, pull_up=False) for p in cfg.pins.pir]
 
 
 def build(cfg, sim=(), terminal_preview=None):
@@ -98,11 +91,7 @@ def build(cfg, sim=(), terminal_preview=None):
         watcher = FaceWatcher(cam, FaceDetector(cfg.camera.detect_scale, cfg.camera.min_score))
 
     face_toggle = sim_camera.toggle_face if sim_camera else None
-    pir_pins = cfg.teensy.pir_pins if cfg.teensy.enabled else cfg.pins.pir
-    if "pir" in sim or not pir_pins:
-        inputs = SimInputs(face_toggle)
-    else:
-        inputs = _try("PIR sensors", lambda: PirSensors(open_pirs(cfg)[1]), lambda: SimInputs(face_toggle))
+    inputs = SimInputs(face_toggle)  # keyboard walk-ups; the camera is what really wakes the show
 
     if "aim" in sim or cfg.teensy.enabled:
         aim = SimAim()
@@ -123,4 +112,10 @@ def build(cfg, sim=(), terminal_preview=None):
 
     if isinstance(display, StreamDisplay):
         display.watcher = watcher  # live camera preview at :<stream_port>/camera
-    return Devices(layout, leds, inputs, aim, sounds, display, watcher, sim_camera, voices)
+
+    imx = None
+    if "imx" in sim:
+        imx = LogImx()
+    elif cfg.imx.host:
+        imx = _try("i.MX triggers", lambda: ImxLink(cfg.imx.host, cfg.imx.port), lambda: None)
+    return Devices(layout, leds, inputs, aim, sounds, display, watcher, sim_camera, voices, imx)

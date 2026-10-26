@@ -127,11 +127,11 @@ def test_upload_delete_and_voices(studio, tmp_path):
 
 def test_show_runs_from_buttons(studio):
     with pytest.raises(StudioError):
-        studio.motion()
+        studio.walk_up()
     studio.start_show("sim")
     studio.tick()
     assert studio.status()["state"] == "IDLE"
-    studio.motion(0)
+    studio.walk_up()
     studio.tick()
     assert studio.status()["state"] == "AWAKE"
     with pytest.raises(StudioError, match="running"):

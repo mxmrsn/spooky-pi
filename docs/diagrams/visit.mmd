@@ -5,13 +5,15 @@ sequenceDiagram
     participant S as Show (state machine)
     participant G as LED glasses
     participant A as Speaker
-    participant D as Display
+    participant D as Pi's screen
+    participant I as i.MX display
 
     V->>C: walks up, face in view
     C->>S: face held 0.5 s
+    S->>I: play "awake"
     S->>G: awake scene (green comets)
     S->>A: "awaken" sound / boss line
-    Note over S: eyes wake for 1.5 s
+    Note over S: eyes wake for 1 s
     S->>G: eyes follow the face, lock-on turns them red
     S->>A: "hold still!" (boss line)
     S->>D: HOLD STILL! over the live camera feed
@@ -21,6 +23,7 @@ sequenceDiagram
     C->>S: best face frame
     S->>S: ScarySmile (≈1.5 s, background thread)
     S->>D: before and after, side by side
+    S->>I: play "reveal"
     S->>A: scream / boss line
-    S->>G: strobe, then fire flicker
+    S->>G: soft red strobe, then ember flicker
     Note over S,D: up for 15 s, then back to the live camera feed

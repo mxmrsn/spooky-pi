@@ -1,0 +1,15 @@
+[Unit]
+Description=Play spooky-pi animations on the Pi's triggers
+After=network-online.target
+
+[Service]
+# Change --run to whatever plays an animation on this board; {animation} is the name the Pi sends.
+ExecStart=/usr/bin/python3 /usr/bin/spooky-trigger.py --run "gst-play-1.0 --no-interactive /opt/spooky/{animation}.mp4"
+Restart=always
+RestartSec=2
+# For a Weston desktop, match these to `ls /run/user/*/wayland-*` on the board:
+Environment=XDG_RUNTIME_DIR=/run/user/0
+Environment=WAYLAND_DISPLAY=wayland-1
+
+[Install]
+WantedBy=multi-user.target

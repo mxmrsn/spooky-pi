@@ -8,6 +8,6 @@ flowchart TB
     PROCESSING -- "scary photo ready" --> REVEAL(["REVEAL"])
     REVEAL -- "2.5 s" --> SHOWING(["SHOWING"])
     SHOWING -- "15 s with reveal (+6 s re-arm)" --> IDLE
-    AWAKE -- "20 s, no face/motion" --> IDLE
+    AWAKE -- "20 s, no face" --> IDLE
     WATCHING -- "face lost" --> AWAKE
     COUNTDOWN -- "face lost" --> AWAKE

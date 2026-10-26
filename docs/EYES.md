@@ -19,6 +19,10 @@ A face in the camera starts a visit; nothing else needs to happen.
 
 After a visit the show waits 6 s (`rearm`); a face still in view then starts the next visit (set `leave_between_visits = true` to make people step away first). The face leaving for 1.5 s (`face_lost_grace`) drops WATCHING or COUNTDOWN back to AWAKE. AWAKE with no face for 20 s (`awake_timeout`) goes back to IDLE. The timings live in `[show]` in `spooky.toml` (defaults in [spooky/config.py](../spooky/config.py)). The code is [spooky/show.py](../spooky/show.py).
 
+## i.MX animations
+
+On each state change the show also sends the i.MX 8M Plus a UDP trigger naming an animation, by default the state in lower case (`awake`, `reveal`, …). The i.MX plays it on its own display. Change the names in `[imx] animations`. The protocol and a receiver are in [imx/README.md](../imx/README.md).
+
 ## Eye states
 
 | Eye state | Look |
@@ -54,6 +58,7 @@ The show serves it on port **8070** (`[control] port`). Use `spooky-pi.local:807
 | `POST /eyes {"state": null}` | give the eyes back to the show now |
 | `POST /show {"action": "wake"}` | start a visit (from IDLE only) |
 | `POST /show {"action": "reset"}` | drop the visit and go back to IDLE |
+| `POST /imx {"animation": "reveal"}` | tell the i.MX to play an animation now |
 
 A hold overrides the show's own eye states, voice lines included, but the show keeps running underneath: the camera, screen and photo carry on. Bad requests get a 400 with an `error` message.
 
@@ -72,7 +77,7 @@ def eyes(state, seconds=None, host="spooky-pi.local:8070"):
 eyes("glare", 3)
 ```
 
-Or use the helper (standard library only): `python tools/eyes.py rage --seconds 5`, `python tools/eyes.py auto`, `python tools/eyes.py --wake`.
+Or use the helper (standard library only): `python tools/eyes.py rage --seconds 5`, `python tools/eyes.py auto`, `python tools/eyes.py --wake`, `python tools/eyes.py --imx reveal`.
 
 ## Changing things
 

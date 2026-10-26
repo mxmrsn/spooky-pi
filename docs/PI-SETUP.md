@@ -43,7 +43,7 @@ bash scripts/setup-new-pi.sh
    - starts the show at boot
    - shows the visitor screen full-screen on HDMI0
    - forces HDMI0 on
-   - makes Ethernet the 192.168.77.1 show network
+   - makes Ethernet the 192.168.77.1 show network, the link to the i.MX
 4. **Reboot:** press Enter to reboot.
 
 ## 4. Check it

@@ -18,7 +18,7 @@ rotate = "ccw"
 gaze_mirror = true   # flip if the eyes look away from visitors
 
 [show]
-wake_on_face = true      # camera watches while idle; a face wakes the show (no PIRs needed)
+wake_on_face = true      # camera watches while idle; a face wakes the show
 awake_timeout = 20.0
 face_hold = 2.0          # lock-on time before the countdown; face_hold + countdown = 5 s to the photo
 hold_still_after = 1.0   # "hold still!" cue this far into the lock-on
@@ -29,10 +29,16 @@ save_photos = true
 keep_photos = 1000
 
 [display]
-backend = "stream"   # stream (i.MX over Ethernet) | pygame | file | none
+backend = "stream"   # stream (web page on :8090 for the Pi's HDMI kiosk) | pygame | file | none
 size = [1920, 1080]   # display resolution
 stream_port = 8090
 rotate = 0
 
 [control]
 port = 8070          # control API: drive the eyes / show from other code (docs/EYES.md); 0 = off
+
+[imx]
+host = "192.168.77.2"   # the i.MX 8M Plus, which plays animations on its own display; "" = off
+port = 5005
+# Animation sent when the show enters each state ("" = none). Protocol: imx/README.md
+# animations = { REVEAL = "scare", SHOWING = "" }

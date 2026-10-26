@@ -13,9 +13,8 @@ import socket
 import threading
 
 from .. import config
-from ..hw import open_pirs, open_strip
+from ..hw import open_strip
 from ..hw.camera import quiet_opencv
-from ..hw.inputs import PirMonitor
 from ..hw.leds import NullStrip
 from ..hw.outputs import LogPlayer, PygamePlayer
 from ..layout import Layout
@@ -52,16 +51,9 @@ def main():
         except Exception as e:
             log.warning("audio unavailable (%s): sounds are silent", e)
 
-    pir = None
-    if not args.sim and (cfg.teensy.pir_pins if cfg.teensy.enabled else cfg.pins.pir):
-        try:
-            pir = PirMonitor(*open_pirs(cfg))
-        except Exception as e:
-            log.warning("motion sensors unavailable (%s): pretend sensors only", e)
-
     signal.signal(signal.SIGTERM, _stop)  # after pygame init, which installs its own
     leds = RecordingLeds(layout, strip)
-    studio = Studio(cfg, leds, player, pir=pir)
+    studio = Studio(cfg, leds, player)
     threading.Thread(target=studio.run, daemon=True).start()
     server = make_server(studio, port=args.port)
     log.info("Spooky Studio ready: http://%s.local:%d  (Ctrl+C to stop)", socket.gethostname(), args.port)
@@ -72,8 +64,6 @@ def main():
     finally:
         studio.stop()
         leds.close()
-        if pir is not None:
-            pir.close()
         server.server_close()
 
 

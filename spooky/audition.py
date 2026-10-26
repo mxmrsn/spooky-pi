@@ -148,7 +148,7 @@ def cmd_play(cfg, args):
 
 def cmd_state(cfg, args):
     state = State[args.state.upper()]
-    sim = {"camera", "pir", "display", "aim"} | ({"leds"} if args.sim else set()) | ({"audio"} if args.mute else set())
+    sim = {"camera", "display", "aim", "imx"} | ({"leds"} if args.sim else set()) | ({"audio"} if args.mute else set())
     dev = hw.build(cfg, sim)
     if args.voice:
         dev.voices.only = args.voice

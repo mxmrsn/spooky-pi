@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 
 from spooky.hw import teensy
-from spooky.hw.inputs import PirMonitor, PirSensors
-from spooky.hw.teensy import KEEPALIVE, RETRY, TeensyInput, TeensyLink, encode_frame
+from spooky.hw.teensy import KEEPALIVE, RETRY, TeensyLink, encode_frame
 
 
 class Clock:
@@ -74,30 +73,13 @@ def test_asks_for_hello_and_sends_frames(rig):
     assert ports[0].written[1:] == encode_frame(np.full((34, 3), 7, np.uint8))
 
 
-def test_pir_levels_drive_inputs(rig):
+def test_reads_the_hello_line_split_across_reads(rig):
     link, ports, clock = rig
-    a, b = TeensyInput(0, link=link), TeensyInput(1, link=link)
-    sensors = PirSensors([a, b])
-    ports[0].incoming += b"spooky-teensy 1 leds=64 pirs=2\nS 00\nS 0"
+    ports[0].incoming += b"S 00\nspooky-teensy 3 leds=64 fr"  # old firmware's status lines are ignored
     link.step()
-    assert link.hello.startswith("spooky-teensy") and sensors.poll() == [] and not sensors.active()
-    ports[0].incoming += b"1\n"  # a line split across reads
+    ports[0].incoming += b"ames=0 bad=0\n"
     link.step()
-    assert (a.value, b.value) == (0, 1) and sensors.poll() == [1] and sensors.active()
-    ports[0].incoming += b"S 11\nS 11\n"
-    link.step()
-    assert sensors.poll() == [0]  # one event per rising edge, not per report
-
-
-def test_monitor_traces_teensy_inputs(rig):
-    link, ports, clock = rig
-    mon = PirMonitor([2, 3], devices=[TeensyInput(i, link=link) for i in range(2)], clock=clock)
-    ports[0].incoming += b"S 10\n"
-    link.step()
-    clock.t += 1.0
-    mon.sample()
-    snap = mon.snapshot()
-    assert snap["pins"] == [2, 3] and snap["levels"] == [1, 0] and snap["stats"][0]["pulses"] == 1
+    assert link.hello == "spooky-teensy 3 leds=64 frames=0 bad=0" and not link.warned
 
 
 def test_keepalive_resends_last_frame(rig):
@@ -116,13 +98,9 @@ def test_keepalive_resends_last_frame(rig):
 
 def test_reconnects_and_resends_after_unplug(rig):
     link, ports, clock = rig
-    inp = TeensyInput(0, link=link)
-    ports[0].incoming += b"S 1\n"
-    link.step()
-    assert inp.value == 1
     ports[0].fail = True
-    link.send_leds(np.ones((2, 3), np.uint8))  # write fails: link drops, PIRs read quiet
-    assert link.ser is None and ports[0].closed and inp.value == 0
+    link.send_leds(np.ones((2, 3), np.uint8))  # write fails: the link drops
+    assert link.ser is None and ports[0].closed
     link.send_leds(np.ones((2, 3), np.uint8))  # no port: ignored
     ports.append(None)
     clock.t += RETRY
@@ -149,10 +127,9 @@ def test_shared_link_closes_with_last_user(monkeypatch):
             super().__init__(port, opener=lambda p: opened.append(FakeSerial()) or opened[-1], start=False)
 
     monkeypatch.setattr(teensy, "TeensyLink", Link)
-    strip = teensy.TeensyStrip()
-    inp = TeensyInput(0)
-    assert inp.link is strip.link and len(opened) == 1
-    strip.close()
+    a, b = teensy.TeensyStrip(), teensy.TeensyStrip()
+    assert a.link is b.link and len(opened) == 1
+    a.close()
     assert not opened[0].closed
-    inp.close()
+    b.close()
     assert opened[0].closed and teensy._links == {}

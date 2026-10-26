@@ -2,7 +2,7 @@
 
 A Halloween photo booth on a Raspberry Pi 4. LED "glasses" (two 16-LED rings) watch for a face. When someone steps up, the eyes lock on, a countdown runs on screen, and the camera takes their photo. The screen then shows it next to a scary version for 15 s, and the booth goes back to waiting.
 
-**Hardware:** a Pi 4 runs everything. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings. The visitor screen is a web page the Pi serves on port 8090: show it on the Pi's own HDMI (kiosk), or on an i.MX 8M Plus over Ethernet.
+**Hardware:** a Pi 4 runs the show. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings. The Pi's own HDMI monitor shows the visitor screen (camera, countdown, before/after), which is also a web page on port 8090. A separate i.MX 8M Plus with its own display plays animations when the Pi tells it to, over Ethernet.
 
 ## Quick start
 
@@ -43,6 +43,7 @@ Watch it from the logs with `ssh spooky-pi@spooky-pi.local "bash ~/spooky/script
 | Stop it | `spooky-mode.sh off` |
 | Show the visitor screen on the Pi's own HDMI | `spooky-mode.sh kiosk on` (full-screen browser, also at every login; `kiosk off` to stop) |
 | Drive the eyes from your code | HTTP API on port 8070: see [docs/EYES.md](docs/EYES.md), or `python tools/eyes.py rage --seconds 5` |
+| Trigger an i.MX animation by hand | `python tools/eyes.py --imx reveal` |
 | Hear the Pi's audio on your PC | `python tools/listen.py` (needs `pip install sounddevice`) |
 | Run without any hardware | `python -m spooky --sim all` (type `f` for a face, `q` to quit) |
 | Run the tests | `python -m pytest` |
@@ -57,7 +58,7 @@ The show is silent until you add sound clips: [sounds/README.md](sounds/README.m
 | `spooky/scenes.py` | the eye states (LED looks) and which one each show state uses |
 | `spooky/config.py` | every setting and its default; override any of them in `spooky.toml` (copy `spooky.example.toml`) |
 | `spooky/control.py` | the eye/show control API |
-| `spooky/hw/` | camera, display stream, LEDs (`teensy.py`), audio |
+| `spooky/hw/` | camera, the visitor screen (`display.py`), LEDs (`teensy.py`), i.MX triggers (`imx.py`), audio |
 | `teensy/` | Teensy firmware (`bash scripts/teensy-flash.sh` builds and flashes it) |
 | `tools/` | bring-up and debugging helpers (`led_test.py`, `focus_view.py`, `face_trigger.py`, …) |
 
@@ -66,6 +67,6 @@ The show is silent until you add sound clips: [sounds/README.md](sounds/README.m
 - [docs/EYES.md](docs/EYES.md): the state machine, every eye state, the control API, and how to tune them
 - [docs/ARTISTS.md](docs/ARTISTS.md): Spooky Studio (port 8080), a browser tool for making LED scenes and adding voices. Run `spooky-mode.sh studio`; it can't run at the same time as the show.
 - [hardware/BOM.md](hardware/BOM.md): wiring, the Teensy and parts
-- [imx/README.md](imx/README.md): setting up the display computer
+- [imx/README.md](imx/README.md): the i.MX 8M Plus: the animation triggers it gets and a receiver to set up on it
 - [docs/SD-BACKUP.md](docs/SD-BACKUP.md): backing up the Pi's SD card
 - [docs/PI-SETUP.md](docs/PI-SETUP.md): setting up a Pi from a fresh SD card (`bash scripts/setup-new-pi.sh` does the work)

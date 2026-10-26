@@ -1,14 +1,13 @@
-"""The Teensy 4.1 on USB that drives the LED glasses and reads the PIRs.
+"""The Teensy 4.1 on USB that drives the LED glasses.
 
 Protocol (firmware: teensy/spooky_teensy):
   Pi -> Teensy  LED frame: A5 5A <n> <n x R,G,B> <sum of the RGB bytes & 0xFF>
-                "?": ask for the hello line and the PIR levels
-  Teensy -> Pi  "spooky-teensy <version> leds=<max> pirs=<k> frames=<good> bad=<bad>"  at boot and after "?"
-                "S <levels>"  e.g. "S 01", PIR 1 first; on every change and every 0.5 s
+                "?": ask for the hello line
+  Teensy -> Pi  "spooky-teensy <version> leds=<max> frames=<good> bad=<bad>"  at boot and after "?"
 
 The Teensy blanks the LEDs if no frame arrives for 2 s, so the link resends the
-last frame while the show is quiet. The strip and the PIR inputs share one link
-per port; it reopens the port on its own if the Teensy is unplugged or resets.
+last frame while the show is quiet. Everything using the Teensy shares one link per
+port; it reopens the port on its own if the Teensy is unplugged or resets.
 """
 
 import glob
@@ -48,13 +47,11 @@ def encode_frame(physical_rgb):
 
 
 class TeensyLink:
-    """One USB serial connection; use connect() so the strip and the PIRs share it."""
+    """One USB serial connection; use connect() so every user shares it."""
 
     def __init__(self, port="", opener=open_serial, clock=time.monotonic, start=True):
         self.port, self.opener, self.clock = port, opener, clock
         self.hello = None  # the firmware's hello line, once seen
-        self.levels = []  # last reported PIR levels
-        self.inputs = []
         self.users = 0
         self.lock = threading.RLock()  # guards the port and the frame
         self.ser = None
@@ -88,7 +85,6 @@ class TeensyLink:
                 pass
             self.ser = None
             self.next_retry = self.clock() + RETRY
-        self._levels("0" * len(self.levels))  # unknown now: report quiet
 
     def _send(self, data):  # caller holds the lock
         if self.ser is None:
@@ -105,12 +101,6 @@ class TeensyLink:
             self.frame = frame
             self._send(frame)
 
-    def _levels(self, bits):
-        self.levels = [int(c == "1") for c in bits]
-        for inp in list(self.inputs):
-            if inp.index < len(self.levels):
-                inp._set(self.levels[inp.index])
-
     def feed(self, chunk):
         self.buf += chunk
         *lines, self.buf = self.buf.split(b"\n")
@@ -119,7 +109,7 @@ class TeensyLink:
         for raw in lines:
             line = raw.decode("ascii", "replace").strip()
             if line.startswith("S "):
-                self._levels(line[2:])
+                pass  # status lines from firmware before v3: ignored
             elif line.startswith("spooky-teensy"):
                 self.hello = line
                 log.info("Teensy: %s", line)
@@ -199,29 +189,3 @@ class TeensyStrip:
     def close(self):
         release(self.link)
 
-
-class TeensyInput:
-    """One PIR as reported by the Teensy, shaped like gpiozero's DigitalInputDevice."""
-
-    def __init__(self, index, port="", link=None):
-        self.index = index
-        self.link = link or connect(port)
-        self.owned = link is None
-        self.when_activated = self.when_deactivated = None
-        levels = self.link.levels
-        self.value = levels[index] if index < len(levels) else 0
-        self.link.inputs.append(self)
-
-    def _set(self, v):
-        if v == self.value:
-            return
-        self.value = v
-        callback = self.when_activated if v else self.when_deactivated
-        if callback is not None:
-            callback()
-
-    def close(self):
-        if self in self.link.inputs:
-            self.link.inputs.remove(self)
-            if self.owned:
-                release(self.link)

@@ -18,6 +18,6 @@ jobs:
       - name: Install
         run: pip install opencv-python-headless numpy pytest
       - name: Shell scripts parse
-        run: for f in scripts/*.sh launchers/*.command deploy.sh; do bash -n "$f"; done && sh -n imx/spooky-display.sh
+        run: for f in scripts/*.sh launchers/*.command deploy.sh; do bash -n "$f"; done && python -m py_compile imx/spooky-trigger.py
       - name: Test
         run: python -m pytest -q

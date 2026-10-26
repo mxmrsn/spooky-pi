@@ -1,6 +1,6 @@
-"""The show: a state machine driving LEDs, sounds, aiming LED, camera and display.
+"""The show: a state machine driving the LED glasses, sounds, camera, the Pi's screen and the i.MX.
 
-    IDLE ─PIR/face─> AWAKE ──face──> WATCHING ──face held (lock-on)──> COUNTDOWN ──> CAPTURE
+    IDLE ──face──> AWAKE ──face──> WATCHING ──face held (lock-on)──> COUNTDOWN ──> CAPTURE
       ^             │ timeout        │ face lost / timeout     │ face lost
       │             v                v                         v
       ├──────── IDLE <────────── AWAKE <──────────────────── AWAKE
@@ -17,8 +17,11 @@ The screen shows the live (mirrored) camera feed with prompts while the camera i
 (step closer / hold still / a countdown), a white flash for the photo, the photo while
 the scary version is made, then before and after side by side.
 
+On every state change it also tells the i.MX 8M Plus (a separate computer with its own
+display) which animation to play: [imx] animations, sent by hw/imx.py.
+
 Teammates can drive it from outside (control.py): hold the eyes in any scene for a
-while or until cleared, start a visit, or reset to IDLE. command() queues these and
+while or until cleared, start a visit, reset to IDLE, or trigger an i.MX animation. command() queues these and
 step() applies them, so any thread may call it.
 
 step(now) does all the work, so tests drive it with a fake clock.
@@ -118,6 +121,9 @@ class Show:
             self.told_hold = False
         if state is State.CAPTURE:
             self.dev.display.flash()
+        animation = self.cfg.imx.animations.get(state.name)
+        if self.dev.imx is not None and animation:
+            self.dev.imx.play(animation, state.name)
         sound, aim, camera = STATE_SETUP[state]
         if state is State.IDLE:
             camera = self.sc.wake_on_face
@@ -183,7 +189,8 @@ class Show:
 
     # ------------------------------------------------------------------ control
     def command(self, name, *args):
-        """Queue a command from any thread: ("eyes", state or None, seconds or None), ("wake",), ("reset",)."""
+        """Queue a command from any thread: ("eyes", state or None, seconds or None), ("wake",),
+        ("reset",), ("imx", animation)."""
         self.commands.put((name, args))
 
     def _apply_commands(self, now):
@@ -200,6 +207,8 @@ class Show:
                 self._enter(State.AWAKE, now)
             elif name == "reset" and self.state is not State.IDLE:
                 self._enter(State.IDLE, now, quiet=True)
+            elif name == "imx" and self.dev.imx is not None:
+                self.dev.imx.play(args[0])
 
     def eyes_status(self, now=None):
         now = self.clock() if now is None else now
@@ -247,7 +256,7 @@ class Show:
         self.dev.leds.show(scene.render(t, self.dev.layout))
         fps = f" cam {self.dev.watcher.fps:.0f} fps" if self.dev.watcher else ""
         self.dev.leds.set_status(f"{self.state.name:<10} {self.elapsed(now):5.1f} s{fps}   "
-                                 "(1/2 = motion, f = face, q = quit)")
+                                 "(w = walk up, f = face, q = quit)")
 
     def _idle(self, now, fired):
         face_wake = False

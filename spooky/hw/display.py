@@ -4,9 +4,9 @@ Besides still images, every backend can show the live camera feed (mirrored, wit
 prompt banner and an optional big centre text such as a countdown digit): call feed()
 as often as you like; the next show()/card()/idle() replaces it.
 
-    stream  serves an MJPEG stream for the i.MX 8M Plus display computer over Ethernet
-            (http://<pi>:8090/stream.mjpg; see imx/README.md), and writes the file too
-    pygame  fullscreen on the Pi's own desktop (HDMI)
+    stream  serves the visitor screen as a web page (http://<pi>:8090/, an MJPEG stream
+            underneath) for the Pi's own HDMI kiosk and any browser; writes the file too
+    pygame  fullscreen on the Pi's own desktop (HDMI), without the web page
     file    writes what would be shown to a JPEG (simulation / headless)
     none    discards everything
 """
@@ -261,7 +261,7 @@ img{max-width:100vw;max-height:100vh}</style>
 
 
 class StreamDisplay(FileDisplay):
-    """MJPEG over HTTP for the display computer. It connects to the Pi and pulls:
+    """The visitor screen over HTTP, for the Pi's HDMI kiosk (scripts/kiosk.sh) and any browser:
 
         /stream.mjpg   multipart JPEG stream: new image on every change, repeated every
                        KEEPALIVE s so a (re)connecting player gets a picture at once

@@ -7,6 +7,7 @@
     POST /eyes  {"state": null}                  back to the show's own eye states
     POST /show  {"action": "wake"}               start a visit (as if a visitor walked up)
     POST /show  {"action": "reset"}              drop the visit and go back to IDLE
+    POST /imx   {"animation": "reveal"}          tell the i.MX to play an animation now
 
 The show serves it on [control] port. Commands are queued and applied on the show's
 next tick, so they're safe from any thread. Guide: docs/EYES.md.
@@ -45,6 +46,13 @@ class ControlServer:
                         if seconds is not None and not (isinstance(seconds, (int, float)) and seconds > 0):
                             raise ValueError("seconds must be a positive number")
                         show.command("eyes", state, seconds)
+                    elif self.path == "/imx":
+                        animation = body.get("animation")
+                        if not isinstance(animation, str) or not animation:
+                            raise ValueError("animation must be a non-empty string")
+                        if show.dev.imx is None:
+                            raise ValueError("i.MX triggers are off ([imx] host is empty)")
+                        show.command("imx", animation)
                     elif self.path == "/show":
                         if body.get("action") not in ACTIONS:
                             raise ValueError(f"action must be one of {', '.join(ACTIONS)}")

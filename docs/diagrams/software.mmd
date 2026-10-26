@@ -2,7 +2,7 @@ flowchart LR
     STUDIO["studio/ · web page :8080<br/>artists' scenes, sounds, buttons"]
     subgraph IN["Inputs · spooky/hw"]
         direction TB
-        CTL["control.py · :8070<br/>teammates' eyes / wake / reset"]
+        CTL["control.py · :8070<br/>eyes / wake / reset / i.MX"]
         CAM["camera.py<br/>USB cam or photos"]
     end
     subgraph BG["Background threads"]
@@ -22,6 +22,7 @@ flowchart LR
         LEDS["teensy.py<br/>USB serial → Teensy → rings"]
         SND["outputs.py<br/>speaker"]
         DSP["display.py · :8090<br/>live camera, prompts, before/after"]
+        IMX["imx.py<br/>UDP trigger → i.MX"]
     end
 
     CTL -- commands --> SHOW
@@ -34,6 +35,7 @@ flowchart LR
     VO -- line --> SND
     SHOW -- "sound effect" --> SND
     SHOW -- "prompts / photos" --> DSP
+    SHOW -- "animation per state" --> IMX
     FW -- "live frames" --> DSP
     STUDIO -. "custom_scenes.json" .-> SCN
     STUDIO -. "uploads → sounds/" .-> VO

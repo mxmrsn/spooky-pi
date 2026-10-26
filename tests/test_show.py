@@ -24,14 +24,14 @@ class Clock:
 class Inputs:
     def __init__(self):
         self.pending = []
-        self.motion = False
+        self.present = False  # someone walked up and is still there
 
     def poll(self):
         fired, self.pending = self.pending, []
         return fired
 
     def active(self):
-        return self.motion
+        return self.present
 
     def close(self):
         pass
@@ -145,7 +145,7 @@ def test_full_scare_cycle(rig):
     assert dev.display.calls[-1] == ("feed", IDLE_TEXT)  # back to the camera feed
     assert sounds_played(dev) == ["awaken", "spotted", "hold_still", "countdown", "shutter", "scream", "outro"]
 
-    # re-arm delay: motion right away is ignored
+    # re-arm delay: a walk-up right away is ignored
     dev.inputs.pending.append(1)
     run(show, clock, DT)
     assert show.state is State.IDLE
@@ -155,7 +155,7 @@ def test_full_scare_cycle(rig):
     assert show.state is State.AWAKE
 
 
-def test_face_wakes_it_without_motion(rig):
+def test_face_wakes_it_without_a_walk_up(rig):
     show, dev, clock, sc = rig
     assert show.state is State.IDLE and dev.watcher.enabled  # camera watches while idle
     dev.watcher.face = True
@@ -232,7 +232,7 @@ def test_countdown_aborts_when_face_leaves(rig):
     assert show.state is State.AWAKE
 
 
-def test_awake_times_out_without_face_or_motion(rig):
+def test_awake_times_out_without_a_face(rig):
     show, dev, clock, sc = rig
     dev.inputs.pending.append(0)
     run(show, clock, DT)
@@ -242,10 +242,10 @@ def test_awake_times_out_without_face_or_motion(rig):
     assert show.state is State.IDLE
 
 
-def test_motion_keeps_it_awake(rig):
+def test_someone_present_keeps_it_awake(rig):
     show, dev, clock, sc = rig
     dev.inputs.pending.append(0)
-    dev.inputs.motion = True
+    dev.inputs.present = True
     run(show, clock, sc.awake_timeout + 5)
     assert show.state is State.AWAKE
 
@@ -405,5 +405,43 @@ def test_control_api_over_http(rig):
         assert post("/show", {"action": "wake"})[0] == 200
         run(show, clock, DT)
         assert show.state is State.AWAKE
+        code, err = post("/imx", {"animation": "reveal"})
+        assert code == 400 and "off" in err["error"]  # the rig has no i.MX
+        assert post("/imx", {"animation": ""})[0] == 400
     finally:
         ctl.close()
+
+
+def test_imx_gets_an_animation_trigger_per_state(rig):
+    import json
+    import socket
+
+    from spooky.hw.imx import ImxLink
+
+    show, dev, clock, sc = rig
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 0))
+    rx.settimeout(1)
+    dev.imx = ImxLink("127.0.0.1", rx.getsockname()[1])
+    show.cfg.imx.animations["WATCHING"] = ""  # nothing for this state
+    dev.inputs.pending.append(0)
+    dev.watcher.face = True
+    run(show, clock, sc.awaken_time + 0.5)
+    assert show.state is State.WATCHING
+    show.command("imx", "thunder")
+    run(show, clock, DT)
+    got = [json.loads(rx.recv(4096)) for _ in range(2)]
+    assert got == [{"cmd": "play", "animation": "awake", "state": "AWAKE", "seq": 1},
+                   {"cmd": "play", "animation": "thunder", "state": None, "seq": 2}]
+    dev.imx.close()
+    rx.close()
+
+
+def test_imx_trigger_without_a_receiver_doesnt_stop_the_show(rig):
+    from spooky.hw.imx import ImxLink
+
+    show, dev, clock, sc = rig
+    dev.imx = ImxLink("127.0.0.1", 9)  # nothing listening
+    dev.inputs.pending.append(0)
+    run(show, clock, 0.5)
+    assert show.state is State.AWAKE

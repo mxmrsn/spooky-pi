@@ -18,19 +18,15 @@ ROOT = Path(__file__).resolve().parent.parent
 @dataclass
 class Pins:
     # Pi GPIO, used only when [teensy] enabled = false (the driver board in hardware/BOM.md)
-    pir: tuple = (23, 24)  # BCM numbers; first is the sensor on the glasses' left as seen from the front
     aim_led: int = 17
     # NeoPixel data is SPI0 MOSI (GPIO10), selected by LedConfig.spi_bus/spi_device
 
 
 @dataclass
 class TeensyConfig:
-    # The LEDs and PIRs hang off a Teensy 4.1 on USB (firmware: teensy/). No aiming LED in this build.
+    # The LEDs hang off a Teensy 4.1 on USB (firmware: teensy/). No aiming LED in this build.
     enabled: bool = True
     port: str = ""  # serial device; empty finds /dev/serial/by-id/*Teensyduino*
-    # Teensy pins with PIRs, as set in the firmware (2, 3); first is the glasses' left sensor.
-    # None fitted for now: a face in the camera wakes the show ([show] wake_on_face).
-    pir_pins: tuple = ()
 
 
 @dataclass
@@ -44,7 +40,7 @@ class LedConfig:
     ring_clockwise: list = field(default_factory=lambda: [True, True])
     brightness: float = 0.4  # global cap, 0..1
     gamma: float = 2.2
-    max_current_a: float = 2.0  # estimated LED current budget: 2.5 A USB brick minus Teensy, PIRs, level shifter
+    max_current_a: float = 2.0  # estimated LED current budget: 2.5 A USB brick minus the Teensy
     fps: int = 50
     spi_bus: int = 0
     spi_device: int = 0
@@ -64,7 +60,7 @@ class CameraConfig:
 
 @dataclass
 class ShowConfig:
-    wake_on_face: bool = True  # the camera watches while idle, and a face wakes the show (no PIRs needed)
+    wake_on_face: bool = True  # the camera watches while idle, and a face wakes the show
     wake_face_hold: float = 0.5  # a face must stay this long to wake it (skips one-frame false detections)
     leave_between_visits: bool = False  # true: someone who stays after their photo must step away before the next
     awaken_time: float = 1.0  # after a face wakes it, the eyes wake up this long before "spotted"
@@ -78,7 +74,7 @@ class ShowConfig:
     flash: float = 0.25
     reveal: float = 2.5  # strobe + scream after the photo appears
     display_seconds: float = 12.5  # before/after stays up reveal + display_seconds = 15 s
-    rearm: float = 6.0  # ignore motion this long after a photo, so one visitor isn't snapped twice
+    rearm: float = 6.0  # after a visit, wait this long before the next one can start
     ambient_interval: list = field(default_factory=lambda: [45.0, 120.0])  # idle cackle every N..M s
     save_photos: bool = True
     keep_photos: int = 1000  # older captures are deleted (~1 MB per photo + scary version)
@@ -98,12 +94,24 @@ class AudioConfig:
 
 @dataclass
 class DisplayConfig:
-    backend: str = "stream"  # stream (to the i.MX 8M Plus over Ethernet) | pygame | file | none
+    backend: str = "stream"  # stream (web page on stream_port: the Pi's HDMI kiosk, browsers) | pygame | file | none
     size: list = field(default_factory=lambda: [1920, 1080])  # display resolution (stream/file backends)
-    stream_port: int = 8090  # http://<pi>:8090/stream.mjpg for the display computer
+    stream_port: int = 8090  # http://<pi>:8090/ is the visitor screen
     rotate: int = 0  # degrees clockwise applied to everything shown
     idle_image: str = "media/idle.jpg"  # optional attract screen
     file_path: str = "captures/display.jpg"  # used by the file backend
+
+
+@dataclass
+class ImxConfig:
+    # The i.MX 8M Plus plays its own animations on its own display. The show tells it which,
+    # with a UDP trigger on each state change (protocol: spooky/hw/imx.py, receiver: imx/).
+    host: str = "192.168.77.2"  # "" = don't send
+    port: int = 5005
+    # Animation name sent when the show enters each state; "" sends nothing for that state
+    animations: dict = field(default_factory=lambda: {
+        "IDLE": "idle", "AWAKE": "awake", "WATCHING": "watching", "COUNTDOWN": "countdown",
+        "CAPTURE": "capture", "PROCESSING": "processing", "REVEAL": "reveal", "SHOWING": "showing"})
 
 
 @dataclass
@@ -121,6 +129,7 @@ class Config:
     audio: AudioConfig = field(default_factory=AudioConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     control: ControlConfig = field(default_factory=ControlConfig)
+    imx: ImxConfig = field(default_factory=ImxConfig)
     captures: str = "captures"
 
     def path(self, p):
