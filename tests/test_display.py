@@ -1,5 +1,6 @@
 import http.client
 import time
+import urllib.error
 import urllib.request
 
 import cv2
@@ -7,15 +8,19 @@ import numpy as np
 import pytest
 
 from spooky.config import DisplayConfig
-from spooky.hw.display import StreamDisplay, idle_card
+from spooky.hw.display import WebDisplay, idle_card
+from spooky.web import WebServer
 
 
 @pytest.fixture
 def display(tmp_path):
-    cfg = DisplayConfig(stream_port=0, file_path=str(tmp_path / "display.jpg"), size=[640, 360])
-    d = StreamDisplay(cfg, tmp_path, host="127.0.0.1")
+    cfg = DisplayConfig(file_path=str(tmp_path / "display.jpg"), size=[640, 360])
+    d = WebDisplay(cfg, tmp_path)
     d.KEEPALIVE = 0.2
+    web = WebServer(0, display=d, host="127.0.0.1")
+    d.port = web.port
     yield d
+    web.close()
     d.close()
 
 
@@ -33,7 +38,7 @@ def read_frame(resp):
 
 
 def test_stream_sends_current_picture_then_updates(display):
-    port = display.server.server_address[1]
+    port = display.port
     conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     conn.request("GET", "/stream.mjpg")
     resp = conn.getresponse()
@@ -57,11 +62,15 @@ def test_stream_sends_current_picture_then_updates(display):
 
 
 def test_snapshot_viewer_and_file(display, tmp_path):
-    port = display.server.server_address[1]
+    port = display.port
     display.show(idle_card((640, 360), "HOLD STILL!"))
     jpg = urllib.request.urlopen(f"http://127.0.0.1:{port}/frame.jpg").read()
     assert cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_COLOR).shape == (360, 640, 3)
     assert b"/stream.mjpg" in urllib.request.urlopen(f"http://127.0.0.1:{port}/").read()
+    assert b"POST /api/imx" in urllib.request.urlopen(f"http://127.0.0.1:{port}/api").read()
+    with pytest.raises(urllib.error.HTTPError) as e:  # no show on this server, so no control API
+        urllib.request.urlopen(f"http://127.0.0.1:{port}/api/eyes")
+    assert e.value.code == 503
     assert (tmp_path / "display.jpg").read_bytes() == jpg  # the Studio preview file matches the stream
 
 
@@ -77,7 +86,7 @@ class Watcher:
 
 
 def test_camera_preview_boxes_faces(display):
-    port = display.server.server_address[1]
+    port = display.port
     off = cv2.imdecode(np.frombuffer(display.camera_jpg(), np.uint8), cv2.IMREAD_COLOR)
     assert off.shape == (360, 640, 3)  # "no camera" card
     display.watcher = Watcher()

@@ -1,9 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "spooky-pi"
-version = "0.1.0"
-description = "Evil doctor Halloween installation on a Raspberry Pi 4"
+version = "0.2.0"
+description = "Evil doctor Halloween photo booth on a Raspberry Pi 4"
+readme = "README.md"
 requires-python = ">=3.11"
+# pygame comes from Raspberry Pi OS (python3-pygame); the Pi's venv uses --system-site-packages
+dependencies = ["numpy", "opencv-python-headless", "pyserial"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+listen = ["sounddevice"]  # spooky.tools.listen: hear the Pi's audio on a PC
+
+[project.scripts]
+spooky = "spooky.__main__:main"
+spooky-studio = "spooky.studio.__main__:main"
+spooky-eyes = "spooky.tools.eyes:main"
+
+[tool.setuptools.packages.find]
+include = ["spooky*"]
+
+[tool.setuptools.package-data]
+"spooky.scare" = ["*.onnx"]
+"spooky.studio" = ["static/*"]
+"spooky.web" = ["static/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["B905"]  # zip() without strict=: the zipped sequences here are built to match

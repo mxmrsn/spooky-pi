@@ -10,7 +10,7 @@ echo   Starting Spooky Studio on the Pi...
 echo   (If it asks for a password, type the Pi password and press Enter.
 echo    The letters won't show while you type - that's normal.)
 echo.
-ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 %PI_USER%@%PI_HOST% "bash ~/spooky/scripts/studio-ctl.sh start"
+ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 %PI_USER%@%PI_HOST% "bash ~/spooky/scripts/pi/spooky-mode.sh studio"
 if errorlevel 1 goto failed
 
 start "" "http://%PI_HOST%:8080"

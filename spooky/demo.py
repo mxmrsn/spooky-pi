@@ -43,8 +43,8 @@ def main():
                     scene.gaze.look = (0.9 * math.sin(t), 0.9 * math.cos(t * 0.7))
                 leds.show(scene.render(t, layout))
                 peak = max(peak, layout.estimate_current_a(leds.last))
-                leds.set_status(f"{name:<14} t={t:4.1f}s  est. LED current {layout.estimate_current_a(leds.last):.2f} A "
-                                f"(peak {peak:.2f} A)")
+                now_a = layout.estimate_current_a(leds.last)
+                leds.set_status(f"{name:<14} t={t:4.1f}s  est. LED current {now_a:.2f} A (peak {peak:.2f} A)")
                 time.sleep(period)
     except KeyboardInterrupt:
         pass

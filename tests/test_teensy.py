@@ -5,14 +5,6 @@ from spooky.hw import teensy
 from spooky.hw.teensy import KEEPALIVE, RETRY, TeensyLink, encode_frame
 
 
-class Clock:
-    def __init__(self):
-        self.t = 0.0
-
-    def __call__(self):
-        return self.t
-
-
 class FakeSerial:
     """Stands in for serial.Serial: records writes, serves queued reads."""
 
@@ -42,8 +34,8 @@ class FakeSerial:
 
 
 @pytest.fixture
-def rig():
-    clock, ports = Clock(), []
+def rig(clock):
+    ports = []
 
     def opener(port):
         if ports and ports[-1] is None:

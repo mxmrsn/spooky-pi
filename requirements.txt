@@ -1,5 +1,0 @@
-# pip-installed into the Pi's venv (created with --system-site-packages).
-# spidev, gpiozero, lgpio, pyserial and pygame come from Raspberry Pi OS itself.
-opencv-python-headless
-numpy
-pytest

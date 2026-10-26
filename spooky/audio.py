@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 ENVELOPE_HZ = 50
-SOUND_EXTS = {".wav", ".ogg", ".mp3"}  # what pygame can play; tools/prep_audio.py converts anything else
+SOUND_EXTS = {".wav", ".ogg", ".mp3"}  # what pygame can play; spooky.tools.prep_audio converts anything else
 DECODE_RATE = 22050
 
 

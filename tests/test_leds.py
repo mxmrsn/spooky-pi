@@ -3,9 +3,7 @@ import pytest
 
 from spooky import scenes
 from spooky.config import LedConfig
-from spooky.hw.leds import BIT0, BIT1, RESET_BYTES, encode
 from spooky.layout import Layout
-
 
 PUPILS = [["left_ring", 16], ["left_pupil", 1], ["right_ring", 16], ["right_pupil", 1]]
 
@@ -59,16 +57,6 @@ def test_brightness_gamma_and_current_cap():
     assert lay.estimate_current_a(phys) <= 0.5 + 0.01
     half = Layout(LedConfig(brightness=0.5, gamma=2.0, max_current_a=100)).to_physical(np.full((32, 3), 0.5))
     assert half.max() == round(255 * 0.25 * 0.5)
-
-
-def test_spi_encoding():
-    phys = np.zeros((2, 3), np.uint8)
-    phys[0] = (255, 0, 0)  # red -> GRB: G=0, R=255, B=0
-    data = encode(phys)
-    assert len(data) == 1 + 2 * 24 + RESET_BYTES
-    px0 = data[1:25]
-    assert set(px0[:8]) == {BIT0} and set(px0[8:16]) == {BIT1} and set(px0[16:24]) == {BIT0}
-    assert data[-RESET_BYTES:] == bytes(RESET_BYTES)
 
 
 @pytest.mark.parametrize("name", list(scenes.SCENES))

@@ -115,7 +115,7 @@ class TeensyLink:
                 log.info("Teensy: %s", line)
             elif line and self.hello is None and not self.warned:
                 self.warned = True
-                log.warning("Teensy sent %r: is the spooky firmware flashed? (scripts/teensy-flash.sh)", line[:80])
+                log.warning("Teensy sent %r: is the spooky firmware flashed? (scripts/pc/teensy-flash.sh)", line[:80])
 
     def step(self):
         """One pass of the background thread: read, keep the LEDs alive, reconnect."""
@@ -178,7 +178,7 @@ def release(link):
 
 
 class TeensyStrip:
-    """The WS2812B chain on the Teensy. Same interface as SpiStrip."""
+    """The WS2812B chain on the Teensy. Same interface as TerminalStrip and NullStrip."""
 
     def __init__(self, port=""):
         self.link = connect(port)

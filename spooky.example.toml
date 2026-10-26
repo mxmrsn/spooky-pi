@@ -10,9 +10,6 @@ ring_clockwise = [true, true]
 brightness = 0.4
 max_current_a = 2.0
 
-[teensy]
-enabled = true   # false: the Pi's own GPIO/SPI and the driver board (hardware/BOM.md)
-
 [camera]
 rotate = "ccw"
 gaze_mirror = true   # flip if the eyes look away from visitors
@@ -29,13 +26,12 @@ save_photos = true
 keep_photos = 1000
 
 [display]
-backend = "stream"   # stream (web page on :8090 for the Pi's HDMI kiosk) | pygame | file | none
+backend = "web"      # web (the visitor page on [web] port, for the Pi's HDMI kiosk) | pygame | file | none
 size = [1920, 1080]   # display resolution
-stream_port = 8090
 rotate = 0
 
-[control]
-port = 8070          # control API: drive the eyes / show from other code (docs/EYES.md); 0 = off
+[web]
+port = 8090          # visitor screen (/), camera view (/camera), control API (/api): docs/EYES.md
 
 [imx]
 host = "192.168.77.2"   # the i.MX 8M Plus, which plays animations on its own display; "" = off

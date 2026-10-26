@@ -16,16 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 @dataclass
-class Pins:
-    # Pi GPIO, used only when [teensy] enabled = false (the driver board in hardware/BOM.md)
-    aim_led: int = 17
-    # NeoPixel data is SPI0 MOSI (GPIO10), selected by LedConfig.spi_bus/spi_device
-
-
-@dataclass
 class TeensyConfig:
-    # The LEDs hang off a Teensy 4.1 on USB (firmware: teensy/). No aiming LED in this build.
-    enabled: bool = True
+    # The LED glasses hang off a Teensy 4.1 on USB (firmware: teensy/)
     port: str = ""  # serial device; empty finds /dev/serial/by-id/*Teensyduino*
 
 
@@ -42,8 +34,6 @@ class LedConfig:
     gamma: float = 2.2
     max_current_a: float = 2.0  # estimated LED current budget: 2.5 A USB brick minus the Teensy
     fps: int = 50
-    spi_bus: int = 0
-    spi_device: int = 0
 
 
 @dataclass
@@ -94,9 +84,8 @@ class AudioConfig:
 
 @dataclass
 class DisplayConfig:
-    backend: str = "stream"  # stream (web page on stream_port: the Pi's HDMI kiosk, browsers) | pygame | file | none
+    backend: str = "web"  # web (the visitor page on [web] port: the Pi's HDMI kiosk, browsers) | pygame | file | none
     size: list = field(default_factory=lambda: [1920, 1080])  # display resolution (stream/file backends)
-    stream_port: int = 8090  # http://<pi>:8090/ is the visitor screen
     rotate: int = 0  # degrees clockwise applied to everything shown
     idle_image: str = "media/idle.jpg"  # optional attract screen
     file_path: str = "captures/display.jpg"  # used by the file backend
@@ -115,20 +104,19 @@ class ImxConfig:
 
 
 @dataclass
-class ControlConfig:
-    port: int = 8070  # control API for teammates to drive the eyes and the show (docs/EYES.md); 0 = off
+class WebConfig:
+    port: int = 8090  # visitor screen (/), camera view (/camera) and control API (/api): spooky/web
 
 
 @dataclass
 class Config:
-    pins: Pins = field(default_factory=Pins)
     teensy: TeensyConfig = field(default_factory=TeensyConfig)
     leds: LedConfig = field(default_factory=LedConfig)
     camera: CameraConfig = field(default_factory=CameraConfig)
     show: ShowConfig = field(default_factory=ShowConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
-    control: ControlConfig = field(default_factory=ControlConfig)
+    web: WebConfig = field(default_factory=WebConfig)
     imx: ImxConfig = field(default_factory=ImxConfig)
     captures: str = "captures"
 

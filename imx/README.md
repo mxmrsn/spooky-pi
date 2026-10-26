@@ -61,6 +61,6 @@ Rename or silence any of them in `[imx] animations` in the Pi's `spooky.toml`; `
 
 ## Testing
 
-- **Send one by hand:** with the show running, run `python tools/eyes.py --imx reveal`, or `curl -X POST spooky-pi.local:8070/imx -d '{"animation": "reveal"}'`.
+- **Send one by hand:** with the show running, run `spooky-eyes --imx reveal`, or `curl -X POST spooky-pi.local:8090/api/imx -d '{"animation": "reveal"}'`.
 - **Watch the triggers without the i.MX:** run `python3 imx/spooky-trigger.py` on a laptop, with `[imx] host` set to the laptop's address.
 - **The Pi's log** has a line for each trigger: `spooky-mode.sh log` shows `i.MX <- reveal`.

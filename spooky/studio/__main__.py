@@ -16,7 +16,7 @@ from .. import config
 from ..hw import open_strip
 from ..hw.camera import quiet_opencv
 from ..hw.leds import NullStrip
-from ..hw.outputs import LogPlayer, PygamePlayer
+from ..hw.speaker import LogPlayer, PygamePlayer
 from ..layout import Layout
 from .core import RecordingLeds, Studio
 from .server import make_server

@@ -39,8 +39,8 @@ weight = 1.0        # how often this boss is picked vs the other
 ![Recording workflow: prep, file, check, audition](../docs/img/recording.png)
 
 ```
-python tools/prep_audio.py raw/coffee.m4a --voice boss_a --event spotted
-python tools/prep_audio.py raw/long_rant.mp3 --voice boss_b --event scream --start 4.2 --end 6.0 --name you_did_what
+python -m spooky.tools.prep_audio raw/coffee.m4a --voice boss_a --event spotted
+python -m spooky.tools.prep_audio raw/long_rant.mp3 --voice boss_b --event scream --start 4.2 --end 6.0 --name you_did_what
 python -m spooky.audition list
 python -m spooky.audition play boss_b --event scream
 ```
@@ -49,4 +49,4 @@ python -m spooky.audition play boss_b --event scream
 - **Length:** keep lines to about 1–4 s. Ambient lines can be longer.
 - **Loudness:** `prep_audio.py` evens it out across clips. `audition list` flags clips that are quiet or clipping.
 - **Rename the bosses:** rename the `boss_a` / `boss_b` folders to whatever you like. The folder name is the voice name.
-- **Placeholders:** `tools/make_placeholders.py` fills every folder with synthetic test clips; `--clean` removes them again.
+- **Placeholders:** `python -m spooky.tools.make_placeholders` fills every folder with synthetic test clips; `--clean` removes them again.

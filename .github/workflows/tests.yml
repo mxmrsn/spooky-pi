@@ -16,8 +16,10 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install
-        run: pip install opencv-python-headless numpy pytest
+        run: pip install -e .[dev]
+      - name: Lint
+        run: ruff check .
       - name: Shell scripts parse
-        run: for f in scripts/*.sh launchers/*.command deploy.sh; do bash -n "$f"; done && python -m py_compile imx/spooky-trigger.py
+        run: for f in scripts/*/*.sh launchers/*.command; do bash -n "$f"; done && python -m py_compile imx/spooky-trigger.py
       - name: Test
         run: python -m pytest -q

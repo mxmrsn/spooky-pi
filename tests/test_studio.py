@@ -33,7 +33,8 @@ def studio(tmp_path):
     cfg.display.file_path = str(tmp_path / "display.jpg")
     t = np.arange(8000) / 8000
     audio.write_wav(tmp_path / "sounds" / "scream" / "aah.wav", 0.4 * np.sin(2 * np.pi * 300 * t), 8000)
-    audio.write_wav(tmp_path / "sounds" / "voices" / "boss" / "spotted" / "hey.wav", 0.4 * np.sin(2 * np.pi * 150 * t), 8000)
+    voice = tmp_path / "sounds" / "voices" / "boss"
+    audio.write_wav(voice / "spotted" / "hey.wav", 0.4 * np.sin(2 * np.pi * 150 * t), 8000)
     (tmp_path / "sounds" / "voices" / "boss" / "voice.toml").write_text('scene = "rage"\n')
     st = Studio(cfg, RecordingLeds(Layout(cfg.leds), NullStrip()), Player(), custom_path=tmp_path / "custom.json")
     st.raw_dir = tmp_path / "raw"

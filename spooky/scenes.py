@@ -1,5 +1,5 @@
 """Scenes: a rings effect plus a pupils effect, by name. These are the eye states
-the show (and teammates, through the control API in control.py) switch between.
+the show (and teammates, through the control API in spooky/web) switch between.
 
 The current glasses have no pupil LEDs, so only the rings effect shows; the pupils
 effect is kept for builds that fit them.
@@ -16,8 +16,22 @@ import numpy as np
 
 from . import custom
 from .audio import ENVELOPE_HZ
-from .effects import (Blend, Breathe, Comet, Fill, Flicker, Gaze, Lightning, Off, Rainbow, Sequence,
-                      Solid, Sparkle, Strobe, Talk)
+from .effects import (
+    Blend,
+    Breathe,
+    Comet,
+    Fill,
+    Flicker,
+    Gaze,
+    Lightning,
+    Off,
+    Rainbow,
+    Sequence,
+    Solid,
+    Sparkle,
+    Strobe,
+    Talk,
+)
 
 
 class Scene:

@@ -32,12 +32,12 @@ In [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
 From your clone (on Windows, use Git Bash):
 
 ```bash
-bash scripts/setup-new-pi.sh
+bash scripts/pc/setup-new-pi.sh
 ```
 
 1. **Connection:** it waits for the Pi. If the old card's host key is still in your `known_hosts`, it forgets it. It also adds your SSH key if needed.
 2. **Code:** it copies the code to the Pi.
-3. **Pi setup:** it runs [scripts/pi-setup.sh](../scripts/pi-setup.sh) on the Pi, which **asks for the Pi password once**:
+3. **Pi setup:** it runs [scripts/pi/pi-setup.sh](../scripts/pi/pi-setup.sh) on the Pi, which **asks for the Pi password once**:
    - installs the packages and the Python environment
    - sets up Teensy access
    - starts the show at boot
@@ -53,7 +53,7 @@ About 1–2 minutes after the reboot:
 - **Monitor:** the live camera with "Step closer... if you dare".
 - **LEDs:** the glasses breathe red.
 - **Web preview:** http://spooky-pi.local:8090/ shows the same screen, and `/camera` shows the camera with face boxes.
-- **Status:** `ssh spooky-pi@spooky-pi.local "bash ~/spooky/scripts/spooky-mode.sh status"` shows `spooky-show` active and enabled, and the HDMI kiosk on.
+- **Status:** `ssh spooky-pi@spooky-pi.local "bash ~/spooky/scripts/pi/spooky-mode.sh status"` shows `spooky-show` active and enabled, and the HDMI kiosk on.
 
 Step in front of the camera for a full visit. Then make a backup card: [SD-BACKUP.md](SD-BACKUP.md).
 
@@ -61,10 +61,10 @@ Step in front of the camera for a full visit. Then make a backup card: [SD-BACKU
 
 | Symptom | Try |
 |---|---|
-| Setup says it needs internet | Connect the Pi to Wi-Fi (desktop network icon, or `sudo nmtui`), then run `bash scripts/setup-new-pi.sh` again. It's safe to rerun. |
+| Setup says it needs internet | Connect the Pi to Wi-Fi (desktop network icon, or `sudo nmtui`), then run `bash scripts/pc/setup-new-pi.sh` again. It's safe to rerun. |
 | Desktop showed at first boot, monitor blank after setup | Undo the forced HDMI mode: `ssh -t spooky-pi@spooky-pi.local "sudo cp /boot/firmware/cmdline.txt.bak-spooky /boot/firmware/cmdline.txt && sudo reboot"`. To rerun the setup later without it, add `FORCE_HDMI=0` after `sudo`. |
 | No LEDs | `spooky-mode.sh log` should show `Teensy: spooky-teensy …`. If it doesn't, check the Teensy's USB and its 5 V brick. |
 | Show runs but no camera image | `spooky-mode.sh restart`; the log says if the camera can't be opened. |
 | See the bare desktop | `spooky-mode.sh kiosk off` (and `kiosk on` to bring it back). |
 
-**Replacing the Teensy:** plug it into your computer and run `bash scripts/teensy-flash.sh --here`. This needs `arduino-cli` and the Teensy core; see [hardware/BOM.md](../hardware/BOM.md).
+**Replacing the Teensy:** plug it into your computer and run `bash scripts/pc/teensy-flash.sh --here`. This needs `arduino-cli` and the Teensy core; see [hardware/BOM.md](../hardware/BOM.md).

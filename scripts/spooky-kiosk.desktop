@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Spooky kiosk
-Comment=Visitor screen full-screen on the Pi's HDMI (spooky-mode.sh kiosk off to stop)
-Exec=bash @HOME@/spooky/scripts/kiosk.sh
-X-GNOME-Autostart-enabled=true

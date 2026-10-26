@@ -20,7 +20,7 @@ the scary version is made, then before and after side by side.
 On every state change it also tells the i.MX 8M Plus (a separate computer with its own
 display) which animation to play: [imx] animations, sent by hw/imx.py.
 
-Teammates can drive it from outside (control.py): hold the eyes in any scene for a
+Teammates can drive it from outside (the control API in spooky/web): hold the eyes in any scene for a
 while or until cleared, start a visit, reset to IDLE, or trigger an i.MX animation. command() queues these and
 step() applies them, so any thread may call it.
 
@@ -66,16 +66,16 @@ class State(Enum):
     SHOWING = "showing"
 
 
-# Per state: (sound event on entry, aiming LED mode, camera on)
+# Per state: (sound event on entry, camera on)
 STATE_SETUP = {
-    State.IDLE: (None, "off", False),
-    State.AWAKE: ("awaken", "pulse", True),
-    State.WATCHING: ("spotted", "on", True),
-    State.COUNTDOWN: ("countdown", "blink", True),
-    State.CAPTURE: ("shutter", "off", True),
-    State.PROCESSING: (None, "off", False),
-    State.REVEAL: ("scream", "blink", False),
-    State.SHOWING: ("outro", "off", False),
+    State.IDLE: (None, False),
+    State.AWAKE: ("awaken", True),
+    State.WATCHING: ("spotted", True),
+    State.COUNTDOWN: ("countdown", True),
+    State.CAPTURE: ("shutter", True),
+    State.PROCESSING: (None, False),
+    State.REVEAL: ("scream", False),
+    State.SHOWING: ("outro", False),
 }
 # States whose own LED scene must not be replaced by a talking voice's scene
 KEEP_SCENE = {State.COUNTDOWN, State.CAPTURE}
@@ -124,13 +124,12 @@ class Show:
         animation = self.cfg.imx.animations.get(state.name)
         if self.dev.imx is not None and animation:
             self.dev.imx.play(animation, state.name)
-        sound, aim, camera = STATE_SETUP[state]
+        sound, camera = STATE_SETUP[state]
         if state is State.IDLE:
             camera = self.sc.wake_on_face
             self.face_since = None  # only a face that appears from now on can wake the show
         if sound and not quiet:
             self.cue(sound, now)
-        self.dev.aim.set(aim)
         if self.dev.watcher is not None:
             (self.dev.watcher.enable if camera else self.dev.watcher.disable)()
 

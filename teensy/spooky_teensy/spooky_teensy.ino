@@ -1,6 +1,6 @@
 // spooky-pi Teensy 4.1: drives the LED glasses for the Pi,
 // over USB serial. The Pi does all the animation, gamma and brightness; this only
-// copies bytes onto the LEDs. Build and flash: scripts/teensy-flash.sh
+// copies bytes onto the LEDs. Build and flash: scripts/pc/teensy-flash.sh
 //
 // Pi -> Teensy   LED frame: A5 5A <n> <n x R,G,B> <sum of the RGB bytes & 0xFF>
 //                '?': send the hello line

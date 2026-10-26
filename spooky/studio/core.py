@@ -17,12 +17,13 @@ import numpy as np
 from .. import audio, custom, scenes
 from ..hw import Devices
 from ..hw.camera import Camera, FaceDetector, FaceWatcher, SimCamera
-from ..hw.display import FileDisplay, StreamDisplay
+from ..hw.display import FileDisplay, WebDisplay
 from ..hw.inputs import SimInputs
 from ..hw.leds import Leds
-from ..hw.outputs import AimLed, SimAim, SoundBank
+from ..hw.speaker import SoundBank
 from ..show import Show
 from ..voices import EVENTS, TALK_TARGETS, Line, VoiceBank, load_voice
+from ..web import WebServer
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ class Studio:
         self.overlay = None  # (scene, start, end) while a clip plays in preview
         self.show = None
         self.show_dev = None
+        self.web = None  # WebServer for the visitor page while a show runs
         self._stop = threading.Event()
         scenes.load_custom(custom_path)
 
@@ -100,7 +102,7 @@ class Studio:
     def frame(self):
         """Current colours as hex strings, in logical order (left ring, right ring, pupils)."""
         f = (self.leds.logical * 255).round().astype(int)
-        return ["#%02x%02x%02x" % tuple(c) for c in f]
+        return [f"#{r:02x}{g:02x}{b:02x}" for r, g, b in f]
 
     def geometry(self):
         px = self.layout.all
@@ -310,24 +312,20 @@ class Studio:
                 cam = sim_cam = SimCamera.from_captures(cfg.path(cfg.captures))
             watcher = FaceWatcher(cam, FaceDetector(cfg.camera.detect_scale, cfg.camera.min_score))
             inputs = SimInputs(sim_cam.toggle_face if sim_cam else None, read_stdin=False)
-            aim = SimAim()
-            if not cfg.teensy.enabled:  # the aiming LED only exists on the old driver board
-                try:
-                    aim = AimLed(cfg.pins.aim_led)
-                except Exception:
-                    pass
-            display = FileDisplay(cfg.display, root)
-            if cfg.display.backend == "stream":  # also serve the visitor page on :8090 (the Pi's HDMI kiosk)
-                try:
-                    display = StreamDisplay(cfg.display, root)
-                    display.watcher = watcher
-                except OSError as e:
-                    log.warning("display stream unavailable (%s); preview only", e)
+            web_screen = cfg.display.backend == "web"  # the visitor page on :8090 (the Pi's HDMI kiosk)
+            display = WebDisplay(cfg.display, root) if web_screen else FileDisplay(cfg.display, root)
+            display.watcher = watcher
             self.show_dev = Devices(
                 self.layout, self.leds, inputs,
-                aim, SoundBank(self.sounds_root, self.player), display, watcher, sim_cam,
+                SoundBank(self.sounds_root, self.player), display, watcher, sim_cam,
                 VoiceBank(self.sounds_root / "voices", self.player, cfg.audio.voice_chance))
             self.show = Show(cfg, self.show_dev, clock=self.clock)
+            self.web = None
+            if web_screen:
+                try:
+                    self.web = WebServer(cfg.web.port, display=display, show=self.show)
+                except OSError as e:
+                    log.warning("web server unavailable (%s); preview only", e)
             self.overlay = None
         self.note(f"Show started ({'real' if camera == 'real' else 'pretend'} camera)")
 
@@ -336,13 +334,16 @@ class Studio:
             if self.show is None:
                 return
             self.show.executor.shutdown(wait=False, cancel_futures=True)
-            for d in (self.show_dev.watcher, self.show_dev.aim, self.show_dev.display):
+            for d in (self.web, self.show_dev.watcher, self.show_dev.display):
+                if d is None:
+                    continue
                 try:
                     d.close()
                 except Exception as e:
                     log.warning("closing %s: %s", type(d).__name__, e)
-            self.show = self.show_dev = None
-            self.scene, self.t0 = scenes.make(self.scene_name if self.scene_name in scenes.SCENES else "idle"), self.clock()
+            self.show = self.show_dev = self.web = None
+            name = self.scene_name if self.scene_name in scenes.SCENES else "idle"
+            self.scene, self.t0 = scenes.make(name), self.clock()
         self.player.stop()
         self.note("Show stopped")
 

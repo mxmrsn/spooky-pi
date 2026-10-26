@@ -1,0 +1,4 @@
+[console_scripts]
+spooky = spooky.__main__:main
+spooky-eyes = spooky.tools.eyes:main
+spooky-studio = spooky.studio.__main__:main

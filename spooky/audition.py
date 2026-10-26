@@ -17,10 +17,10 @@ import time
 from pathlib import Path
 
 from . import audio, config, hw, scenes
+from .audio import SOUND_EXTS
 from .hw import open_strip
 from .hw.leds import Leds, TerminalStrip
-from .audio import SOUND_EXTS
-from .hw.outputs import LogPlayer, PygamePlayer
+from .hw.speaker import LogPlayer, PygamePlayer
 from .layout import Layout
 from .show import Show, State
 from .voices import EVENTS, Line, VoiceBank
@@ -75,7 +75,7 @@ def cmd_list(cfg, args):
     rows = library_report(cfg)
     if not rows:
         print(f"No clips yet. Put files in {cfg.audio.folder}/<event>/ or {cfg.audio.folder}/voices/<name>/<event>/")
-        print("(tools/make_placeholders.py creates test clips.)")
+        print("(python -m spooky.tools.make_placeholders creates test clips.)")
         return 0
     print(f"{'source':<12} {'event':<10} {'file':<34} {'len':>6} {'peak':>6} {'rms':>6}  notes")
     for source, event, name, info, problems, warnings in rows:
@@ -148,7 +148,7 @@ def cmd_play(cfg, args):
 
 def cmd_state(cfg, args):
     state = State[args.state.upper()]
-    sim = {"camera", "display", "aim", "imx"} | ({"leds"} if args.sim else set()) | ({"audio"} if args.mute else set())
+    sim = {"camera", "display", "imx"} | ({"leds"} if args.sim else set()) | ({"audio"} if args.mute else set())
     dev = hw.build(cfg, sim)
     if args.voice:
         dev.voices.only = args.voice

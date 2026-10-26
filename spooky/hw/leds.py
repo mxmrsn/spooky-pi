@@ -1,38 +1,11 @@
-"""LED outputs: the real WS2812B chain over SPI, and a terminal preview."""
+"""LED output helpers: the frame mapper (Leds), a terminal preview and a null strip.
+
+The real chain is TeensyStrip in teensy.py."""
 
 import sys
 import time
 
 import numpy as np
-
-SPI_HZ = 6_400_000  # 8 SPI bits per WS2812 bit -> 156 ns per SPI bit
-BIT0, BIT1 = 0b11000000, 0b11111000  # 312 ns high / 781 ns high
-RESET_BYTES = 240  # >= 300 us low latches the frame
-
-
-def encode(physical_rgb):
-    """Physical uint8 RGB (n, 3) -> SPI bytes for WS2812B (GRB order, MSB first)."""
-    grb = np.ascontiguousarray(physical_rgb[:, [1, 0, 2]], dtype=np.uint8).ravel()
-    bits = np.unpackbits(grb)
-    return b"\x00" + np.where(bits, BIT1, BIT0).astype(np.uint8).tobytes() + bytes(RESET_BYTES)
-
-
-class SpiStrip:
-    """WS2812B chain on SPI MOSI (GPIO10). Needs SPI enabled; on a Pi 4 also set
-    core_freq_min=500 in /boot/firmware/config.txt so the SPI clock doesn't drift."""
-
-    def __init__(self, bus=0, device=0):
-        import spidev
-        self.spi = spidev.SpiDev()
-        self.spi.open(bus, device)
-        self.spi.max_speed_hz = SPI_HZ
-        self.spi.mode = 0
-
-    def write(self, physical_rgb):
-        self.spi.writebytes2(encode(physical_rgb))
-
-    def close(self):
-        self.spi.close()
 
 
 class TerminalStrip:

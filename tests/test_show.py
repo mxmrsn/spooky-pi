@@ -13,14 +13,6 @@ from spooky.show import CLOSER_TEXT, DEVELOP_TEXT, HOLD_TEXT, IDLE_TEXT, Show, S
 DT = 0.05
 
 
-class Clock:
-    def __init__(self):
-        self.t = 100.0
-
-    def __call__(self):
-        return self.t
-
-
 class Inputs:
     def __init__(self):
         self.pending = []
@@ -87,14 +79,13 @@ class Immediate:
 
 
 @pytest.fixture
-def rig():
+def rig(clock):
     cfg = Config()
     cfg.show.save_photos = False
     cfg.show.ambient_interval = [1e6, 1e6]
-    clock = Clock()
     layout = Layout(cfg.leds)
-    sounds, aim, display = Recorder(), Recorder(), Recorder()
-    dev = Devices(layout, Leds(layout, NullStrip()), Inputs(), aim, sounds, display, Watcher(clock))
+    sounds, display = Recorder(), Recorder()
+    dev = Devices(layout, Leds(layout, NullStrip()), Inputs(), sounds, display, Watcher(clock))
     show = Show(cfg, dev, clock=clock, scare_fn=lambda f, g, e: (f + 1, 1), executor=Immediate())
     return show, dev, clock, cfg.show
 
@@ -378,10 +369,11 @@ def test_control_api_over_http(rig):
     import json
     import urllib.error
     import urllib.request
-    from spooky.control import ControlServer
+
+    from spooky.web import WebServer
 
     show, dev, clock, sc = rig
-    ctl = ControlServer(show, 0, host="127.0.0.1")
+    ctl = WebServer(0, show=show, host="127.0.0.1")
     base = f"http://127.0.0.1:{ctl.port}"
 
     def post(path, body):
@@ -393,21 +385,21 @@ def test_control_api_over_http(rig):
             return e.code, json.load(e)
 
     try:
-        assert b"POST /eyes" in urllib.request.urlopen(base + "/").read()
-        assert post("/eyes", {"state": "venom", "seconds": 3}) == (200, {"ok": True})
+        assert b"POST /api/eyes" in urllib.request.urlopen(base + "/api").read()
+        assert post("/api/eyes", {"state": "venom", "seconds": 3}) == (200, {"ok": True})
         run(show, clock, DT)
-        status = json.load(urllib.request.urlopen(base + "/eyes"))
+        status = json.load(urllib.request.urlopen(base + "/api/eyes"))
         assert status["eyes"] == "venom" and status["override"]["state"] == "venom"
-        code, err = post("/eyes", {"state": "nope"})
+        code, err = post("/api/eyes", {"state": "nope"})
         assert code == 400 and "unknown eye state" in err["error"]
-        assert post("/eyes", {"state": "venom", "seconds": -1})[0] == 400
-        assert post("/show", {"action": "dance"})[0] == 400
-        assert post("/show", {"action": "wake"})[0] == 200
+        assert post("/api/eyes", {"state": "venom", "seconds": -1})[0] == 400
+        assert post("/api/show", {"action": "dance"})[0] == 400
+        assert post("/api/show", {"action": "wake"})[0] == 200
         run(show, clock, DT)
         assert show.state is State.AWAKE
-        code, err = post("/imx", {"animation": "reveal"})
+        code, err = post("/api/imx", {"animation": "reveal"})
         assert code == 400 and "off" in err["error"]  # the rig has no i.MX
-        assert post("/imx", {"animation": ""})[0] == 400
+        assert post("/api/imx", {"animation": ""})[0] == 400
     finally:
         ctl.close()
 

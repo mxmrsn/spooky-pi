@@ -2,13 +2,13 @@ flowchart LR
     STUDIO["studio/ · web page :8080<br/>artists' scenes, sounds, buttons"]
     subgraph IN["Inputs · spooky/hw"]
         direction TB
-        CTL["control.py · :8070<br/>eyes / wake / reset / i.MX"]
+        CTL["web · :8090/api<br/>eyes / wake / reset / i.MX"]
         CAM["camera.py<br/>USB cam or photos"]
     end
     subgraph BG["Background threads"]
         direction TB
         FW["FaceWatcher<br/>YuNet faces"]
-        EX["scare worker<br/>ScarySmile"]
+        EX["scare worker<br/>spooky.scare"]
     end
     subgraph CORE["Main loop · 50 Hz"]
         direction TB
@@ -20,7 +20,7 @@ flowchart LR
     subgraph OUT["Outputs · spooky/hw"]
         direction TB
         LEDS["teensy.py<br/>USB serial → Teensy → rings"]
-        SND["outputs.py<br/>speaker"]
+        SND["speaker.py<br/>sound"]
         DSP["display.py · :8090<br/>live camera, prompts, before/after"]
         IMX["imx.py<br/>UDP trigger → i.MX"]
     end

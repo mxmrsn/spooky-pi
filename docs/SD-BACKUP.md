@@ -33,7 +33,7 @@ Install **Win32 Disk Imager** from its official SourceForge page (search "win32d
    - Click **Read**. It takes about 15–40 minutes for 64 GB.
 4. **Shrink the image** to fit a 32 GB card. This runs in WSL Ubuntu with Ubuntu's own tools (`e2fsck`, `resize2fs`, `parted`):
    ```
-   wsl -d Ubuntu -u root bash /mnt/c/Users/<you>/Documents/code/spooky-pi/tools/shrink-image.sh /mnt/c/spooky-backups/spooky-pi-2026-10-22.img 24G
+   wsl -d Ubuntu -u root bash /mnt/c/Users/<you>/Documents/code/spooky-pi/scripts/pc/shrink-image.sh /mnt/c/spooky-backups/spooky-pi-2026-10-22.img 24G
    ```
    It writes `...-24G.img` next to the original and leaves the original untouched.
 5. **Swap in the backup card**, again clicking **Cancel** on any format prompts. If it's brand new it may show as a blank drive; that's fine.

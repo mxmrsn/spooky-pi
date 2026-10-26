@@ -8,7 +8,7 @@ The picture of the glasses at the top left always shows what the real glasses ar
 
 > **Page doesn't open?** The Studio isn't running. Double-click **Start Spooky Studio** in the
 > [`launchers`](../launchers/README.md) folder (`.cmd` on Windows, `.command` on Mac). It asks for the Pi password and opens the page for you.
-> When you're finished, double-click **Stop Spooky Studio** so the real show can use the lights.
+> When you're finished, double-click **Stop Spooky Studio** to put the real show back on.
 > If `spooky-pi.local` doesn't work on your device, try **http://10.0.3.68:8080**.
 
 ---

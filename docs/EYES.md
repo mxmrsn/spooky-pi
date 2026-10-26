@@ -44,40 +44,40 @@ On each state change the show also sends the i.MX 8M Plus a UDP trigger naming a
 | `glare` | amber breathing |
 | `venom` | slow green comets |
 
-Scenes made in the Studio (saved to `custom_scenes.json`) are eye states too. `GET /eyes` lists everything available right now.
+Scenes made in the Studio (saved to `custom_scenes.json`) are eye states too. `GET /api/eyes` lists everything available right now.
 
 ## Control API
 
-The show serves it on port **8070** (`[control] port`). Use `spooky-pi.local:8070` on the same network, or `192.168.77.1:8070` on the show's Ethernet.
+It's part of the Pi's one web server, on port **8090** (`[web] port`) under `/api`; `GET /api` prints the list below. Use `spooky-pi.local:8090` on the same network, or `192.168.77.1:8090` on the show's Ethernet.
 
 | Request | Does |
 |---|---|
-| `GET /eyes` | show state, current eye state, any hold, and every eye state |
-| `POST /eyes {"state": "rage"}` | hold an eye state until cleared |
-| `POST /eyes {"state": "rage", "seconds": 5}` | hold it for 5 s, then give the eyes back to the show |
-| `POST /eyes {"state": null}` | give the eyes back to the show now |
-| `POST /show {"action": "wake"}` | start a visit (from IDLE only) |
-| `POST /show {"action": "reset"}` | drop the visit and go back to IDLE |
-| `POST /imx {"animation": "reveal"}` | tell the i.MX to play an animation now |
+| `GET /api/eyes` | show state, current eye state, any hold, and every eye state |
+| `POST /api/eyes {"state": "rage"}` | hold an eye state until cleared |
+| `POST /api/eyes {"state": "rage", "seconds": 5}` | hold it for 5 s, then give the eyes back to the show |
+| `POST /api/eyes {"state": null}` | give the eyes back to the show now |
+| `POST /api/show {"action": "wake"}` | start a visit (from IDLE only) |
+| `POST /api/show {"action": "reset"}` | drop the visit and go back to IDLE |
+| `POST /api/imx {"animation": "reveal"}` | tell the i.MX to play an animation now |
 
 A hold overrides the show's own eye states, voice lines included, but the show keeps running underneath: the camera, screen and photo carry on. Bad requests get a 400 with an `error` message.
 
 ```bash
-curl -s spooky-pi.local:8070/eyes
-curl -s -X POST spooky-pi.local:8070/eyes -d '{"state": "rage", "seconds": 5}'
+curl -s spooky-pi.local:8090/api/eyes
+curl -s -X POST spooky-pi.local:8090/api/eyes -d '{"state": "rage", "seconds": 5}'
 ```
 
 ```python
 import json, urllib.request
 
-def eyes(state, seconds=None, host="spooky-pi.local:8070"):
+def eyes(state, seconds=None, host="spooky-pi.local:8090"):
     body = json.dumps({"state": state, "seconds": seconds}).encode()
-    urllib.request.urlopen(urllib.request.Request(f"http://{host}/eyes", body))
+    urllib.request.urlopen(urllib.request.Request(f"http://{host}/api/eyes", body))
 
 eyes("glare", 3)
 ```
 
-Or use the helper (standard library only): `python tools/eyes.py rage --seconds 5`, `python tools/eyes.py auto`, `python tools/eyes.py --wake`, `python tools/eyes.py --imx reveal`.
+Or use the helper: `spooky-eyes rage --seconds 5`, `spooky-eyes auto`, `spooky-eyes --wake`, `spooky-eyes --imx reveal`. Without installing the package, `python -m spooky.tools.eyes …` from a clone does the same with only the standard library.
 
 ## Changing things
 
@@ -88,7 +88,7 @@ Or use the helper (standard library only): `python tools/eyes.py rage --seconds 
 
 ## Running and testing
 
-- On the Pi: `bash ~/spooky/scripts/spooky-mode.sh show` (or `studio`, `off`, `status`, `log`).
+- On the Pi: `bash ~/spooky/scripts/pi/spooky-mode.sh show` (or `studio`, `off`, `status`, `log`).
 - Visitor screen: `http://spooky-pi.local:8090/`. Camera with face boxes: `/camera`. On the Pi's own HDMI: `spooky-mode.sh kiosk on`.
-- Without hardware: `python -m spooky --sim all`. Type `f` for a face, `q` to quit. The control API works there too, on `localhost:8070`.
-- Tests: `python -m pytest`.
+- Without hardware: `spooky --sim all` (after `pip install -e ".[dev]"`). Type `f` for a face, `w` for a walk-up, `q` to quit. The web server and API work there too, on `localhost:8090`.
+- Tests and lint: `python -m pytest && ruff check .`.

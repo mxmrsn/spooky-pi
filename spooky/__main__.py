@@ -10,8 +10,9 @@ import logging
 import signal
 
 from . import config, hw
-from .control import ControlServer
+from .hw.display import WebDisplay
 from .show import Show
+from .web import WebServer
 
 
 def _stop(signum, frame):
@@ -31,14 +32,13 @@ def main():
     dev = hw.build(cfg, [s for s in args.sim.split(",") if s])
     signal.signal(signal.SIGTERM, _stop)
     show = Show(cfg, dev)
-    control = ControlServer(show, cfg.control.port) if cfg.control.port else None
+    web = WebServer(cfg.web.port, display=dev.display if isinstance(dev.display, WebDisplay) else None, show=show)
     try:
         show.run()
     except KeyboardInterrupt:
         pass
     finally:
-        if control is not None:
-            control.close()
+        web.close()
         dev.close()
 
 

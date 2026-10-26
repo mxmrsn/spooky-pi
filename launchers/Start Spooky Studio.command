@@ -10,7 +10,7 @@ echo "  (If it asks for a password, type the Pi password and press Enter."
 echo "   The letters won't show while you type - that's normal.)"
 echo
 if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "$PI_USER@$PI_HOST" \
-     "bash ~/spooky/scripts/studio-ctl.sh start"; then
+     "bash ~/spooky/scripts/pi/spooky-mode.sh studio"; then
   URL="http://$PI_HOST:8080"
   echo
   if command -v open >/dev/null; then open "$URL"; echo "  Spooky Studio is open in your browser. You can close this window."
