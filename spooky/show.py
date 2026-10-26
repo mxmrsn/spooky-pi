@@ -9,8 +9,9 @@
 
 With [show] wake_on_face the camera also watches while IDLE, and a face that stays
 wake_face_hold seconds wakes the show; the eyes then wake for awaken_time before the
-lock-on starts. A visitor still standing there after their photo has to leave and come
-back to be snapped again.
+lock-on starts. After a visit the show waits `rearm` seconds, then a face still in
+view starts the next one (or, with leave_between_visits, the visitor must step away
+first).
 
 The screen shows the live (mirrored) camera feed with prompts while the camera is on
 (step closer / hold still / a countdown), a white flash for the photo, the photo while
@@ -252,8 +253,10 @@ class Show:
         face_wake = False
         if self.sc.wake_on_face and self.dev.watcher is not None:
             self._update_face(now)
-            face_wake = (self.face_since is not None and self.face_since >= self.rearm_until
-                         and now - self.face_since >= self.sc.wake_face_hold)
+            since = self.face_since
+            if since is not None and not self.sc.leave_between_visits:
+                since = max(since, self.rearm_until)  # a face that stays counts from the end of the rearm
+            face_wake = since is not None and since >= self.rearm_until and now - since >= self.sc.wake_face_hold
         if face_wake or (fired and now >= self.rearm_until):
             self.woke_by_face = face_wake
             if not face_wake:

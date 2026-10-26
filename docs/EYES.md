@@ -17,7 +17,7 @@ A face in the camera starts a visit; nothing else needs to happen.
 | REVEAL | scary version ready (~2 s) | `reveal` | before and after |
 | SHOWING | 2.5 s later (`reveal`) | `showing` | before and after, until 15 s in total |
 
-The face leaving for 1.5 s (`face_lost_grace`) drops WATCHING or COUNTDOWN back to AWAKE. AWAKE with no face for 20 s (`awake_timeout`) goes back to IDLE. The timings live in `[show]` in `spooky.toml` (defaults in [spooky/config.py](../spooky/config.py)). The code is [spooky/show.py](../spooky/show.py).
+After a visit the show waits 6 s (`rearm`); a face still in view then starts the next visit (set `leave_between_visits = true` to make people step away first). The face leaving for 1.5 s (`face_lost_grace`) drops WATCHING or COUNTDOWN back to AWAKE. AWAKE with no face for 20 s (`awake_timeout`) goes back to IDLE. The timings live in `[show]` in `spooky.toml` (defaults in [spooky/config.py](../spooky/config.py)). The code is [spooky/show.py](../spooky/show.py).
 
 ## Eye states
 

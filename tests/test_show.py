@@ -170,8 +170,21 @@ def test_face_wakes_it_without_motion(rig):
     assert sounds_played(dev) == ["awaken", "spotted"]
 
 
-def test_visitor_who_stays_is_not_snapped_twice(rig):
+def test_face_that_stays_starts_the_next_visit_after_rearm(rig):
     show, dev, clock, sc = rig
+    dev.watcher.face = True
+    run(show, clock, sc.wake_face_hold + sc.awaken_time + sc.face_hold + sc.countdown + 1)
+    run(show, clock, sc.reveal + sc.display_seconds)
+    assert show.state is State.IDLE
+    run(show, clock, sc.rearm - 0.5)
+    assert show.state is State.IDLE  # still re-arming
+    run(show, clock, 0.5 + sc.wake_face_hold + 0.1)
+    assert show.state is State.AWAKE
+
+
+def test_visitor_who_stays_must_leave_first_if_configured(rig):
+    show, dev, clock, sc = rig
+    sc.leave_between_visits = True
     dev.watcher.face = True
     run(show, clock, sc.wake_face_hold + sc.awaken_time + sc.face_hold + sc.countdown + 1)
     assert show.state in (State.REVEAL, State.SHOWING)

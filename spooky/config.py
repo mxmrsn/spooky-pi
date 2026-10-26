@@ -66,6 +66,7 @@ class CameraConfig:
 class ShowConfig:
     wake_on_face: bool = True  # the camera watches while idle, and a face wakes the show (no PIRs needed)
     wake_face_hold: float = 0.5  # a face must stay this long to wake it (skips one-frame false detections)
+    leave_between_visits: bool = False  # true: someone who stays after their photo must step away before the next
     awaken_time: float = 1.0  # after a face wakes it, the eyes wake up this long before "spotted"
     awake_timeout: float = 20.0  # back to idle if no face appears for this long
     # From lock-on to photo: face_hold + countdown = 5 s with the face in view the whole time
