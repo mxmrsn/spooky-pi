@@ -6,17 +6,14 @@ The LED glasses connect to a Teensy 4.1 (firmware: [teensy/spooky_teensy](../tee
 
 ```
 Pi 4 ══USB (data)══> Teensy 4.1
-5V brick ─ Adafruit 3628 ─ WAGO split ─┬─> Teensy VIN / GND      (VUSB–VIN pad cut)
-                                       ├─> 74AHCT125 VCC (14) / GND (7), 0.1 µF across
-                                       ├─> glasses 5V / GND, 1000 µF across
-                                       └─> (optional) PIR 1, PIR 2  5V / GND
-Teensy pin 1 ─> AHCT 1A (2) ; 1Y (3) ─ 330 Ω ─> left ring DIN ; left DOUT ─> right ring DIN
-(optional) Teensy pin 2 <─ PIR 1 OUT (glasses' left, seen from the front) ; pin 3 <─ PIR 2 OUT
+5V brick ─┬─> Teensy VIN / GND            (VUSB–VIN pad cut)
+          └─> rings 5V / GND
+Teensy pin 1 ─> left ring DIN ; left DOUT ─> right ring DIN ; Teensy GND ─ ring GND
 ```
 
 - **Cut the VUSB–VIN pad** on the Teensy's underside. Otherwise the Pi's USB 5 V and the brick are tied together. USB data still works.
-- **74AHCT125:** tie unused inputs (5, 9, 12) to GND and unused OE pins (4, 10, 13) to 5 V. The Teensy's 3.3 V output is marginal for WS2812Bs at 5 V; the AHCT makes it a clean 5 V.
-- **Without the AHCT:** pin 1 straight to DIN also works on this build (3.3 V data into a 5 V ring is marginal but fine here). Share a ground between the Teensy and the rings.
+- **Data level:** pin 1 drives DIN directly. 3.3 V data into a 5 V ring is marginal but works here; if a ring misbehaves, add a 74AHCT125 buffer (and 330 Ω in series with DIN) between them.
+- **Power dips:** a 1000 µF capacitor across the rings' 5 V/GND and short, thick power leads keep the Teensy from resetting when the LEDs jump in brightness.
 - **PIRs, if fitted:** their OUT must be 3.3 V; the Teensy 4.1's pins are *not* 5 V tolerant. Check the module's pin order on its silkscreen, and that OUT idles at 0 V, before wiring it to a pin.
 - **Pin 13's LED** blinks whenever the firmware runs: 1 Hz while waiting, 4 Hz while frames arrive. Steady on or off means it's stuck or not running. The Teensy blanks the glasses if the Pi goes quiet for 2 s.
 - **Budget:** 32 LEDs at full white is about 1.9 A; `max_current_a = 2.0` caps the LEDs and leaves room on the 2.5 A brick for the Teensy.

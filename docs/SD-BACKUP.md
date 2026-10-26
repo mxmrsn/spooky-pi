@@ -42,7 +42,7 @@ Install **Win32 Disk Imager** from its official SourceForge page (search "win32d
    - Click **Write**, then about 20–60 minutes.
    - If it says the card is too small, stop and ask: the image can be shrunk to fit.
 7. **Optional but recommended:** click **Verify Only** to compare the card with the image.
-8. **Label both cards** (e.g. "spooky MAIN" / "spooky BACKUP 10-22"), put the **original** back in the Pi, and power it up. The Studio starts by itself.
+8. **Label both cards** (e.g. "spooky MAIN" / "spooky BACKUP 10-22"), put the **original** back in the Pi, and power it up. The show (or the Studio, whichever mode was set) starts by itself.
 
 ## Using the backup
 

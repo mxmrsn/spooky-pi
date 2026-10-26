@@ -335,7 +335,7 @@ class Studio:
                 VoiceBank(self.sounds_root / "voices", self.player, cfg.audio.voice_chance))
             self.show = Show(cfg, self.show_dev, clock=self.clock)
             self.overlay = None
-        real = "real camera + sensors" if self.pir is not None else "real camera, pretend sensors"
+        real = "real camera + motion sensors" if self.pir is not None else "real camera"
         self.note(f"Show started ({real if camera == 'real' else 'pretend camera and sensors'})")
 
     def stop_show(self):

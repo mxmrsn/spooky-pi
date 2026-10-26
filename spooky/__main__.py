@@ -1,8 +1,8 @@
 """Run the show.
 
     python -m spooky                 everything real (falls back per device if missing)
-    python -m spooky --sim all       fully simulated: terminal LEDs, keyboard PIR, fake camera
-    python -m spooky --sim leds,pir  simulate just some devices
+    python -m spooky --sim all       fully simulated: terminal LEDs, keyboard, photos as the camera
+    python -m spooky --sim leds,audio  simulate just some devices
 """
 
 import argparse

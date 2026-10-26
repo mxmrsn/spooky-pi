@@ -2,7 +2,7 @@ flowchart LR
     STUDIO["studio/ · web page :8080<br/>artists' scenes, sounds, buttons"]
     subgraph IN["Inputs · spooky/hw"]
         direction TB
-        PIR["inputs.py<br/>PIR or keyboard"]
+        CTL["control.py · :8070<br/>teammates' eyes / wake / reset"]
         CAM["camera.py<br/>USB cam or photos"]
     end
     subgraph BG["Background threads"]
@@ -19,13 +19,12 @@ flowchart LR
     end
     subgraph OUT["Outputs · spooky/hw"]
         direction TB
-        LEDS["leds.py<br/>SPI or terminal"]
+        LEDS["teensy.py<br/>USB serial → Teensy → rings"]
         SND["outputs.py<br/>speaker"]
-        AIM["outputs.py<br/>aiming LED"]
-        DSP["display.py<br/>screen or file"]
+        DSP["display.py · :8090<br/>live camera, prompts, before/after"]
     end
 
-    PIR -- motion --> SHOW
+    CTL -- commands --> SHOW
     CAM --> FW -- faces --> SHOW
     SHOW <-- "photo / scary image" --> EX
     SHOW -- event --> VO
@@ -34,8 +33,8 @@ flowchart LR
     SCN -- frame --> LAY --> LEDS
     VO -- line --> SND
     SHOW -- "sound effect" --> SND
-    SHOW -- mode --> AIM
-    SHOW -- photo --> DSP
+    SHOW -- "prompts / photos" --> DSP
+    FW -- "live frames" --> DSP
     STUDIO -. "custom_scenes.json" .-> SCN
     STUDIO -. "uploads → sounds/" .-> VO
-    STUDIO -. "pretend PIR / face" .-> SHOW
+    STUDIO -. "pretend visitor / face" .-> SHOW

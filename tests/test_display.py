@@ -98,14 +98,14 @@ def test_live_feed_then_stills(display):
     display.watcher = Watcher()
     display.feed("Step closer", "3")
     time.sleep(0.15)
-    v = display.version
     img = cv2.imdecode(np.frombuffer(display.jpg, np.uint8), cv2.IMREAD_COLOR)
     assert img.shape == (360, 640, 3) and img[150:210, 290:350].max() > 200  # the big white "3"
     photo = np.full((300, 200, 3), 80, np.uint8)
     display.compare(photo, photo + 100)
     assert display.live is None
+    v = display.version
     time.sleep(0.1)
-    assert display.version == v + 1  # the live loop leaves the still alone
+    assert display.version == v  # the live loop leaves the still alone
     img = cv2.imdecode(np.frombuffer(display.jpg, np.uint8), cv2.IMREAD_COLOR)
     assert abs(int(img[180, 200, 0]) - 80) < 15 and abs(int(img[180, 440, 0]) - 180) < 15  # before | after
 

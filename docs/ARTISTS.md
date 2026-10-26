@@ -20,7 +20,7 @@ The picture of the glasses at the top left always shows what the real glasses ar
 | To… | Do this |
 |---|---|
 | See a look on the glasses | Click its name under **Try a scene** |
-| Make your own | Under **Make your own**, pick an effect for the **Rings** and one for the **Pupils**, then drag the sliders and pick colours. The glasses change as you go |
+| Make your own | Under **Make your own**, pick an effect for the **Rings**, then drag the sliders and pick colours. The glasses change as you go |
 | Keep it | Type a name and press **💾 Save scene**. It appears with a ★ |
 | Change a saved one | **Start from** → pick it, change it, save with the same name |
 | Use it in the show | Under **Show moments**, pick your scene for e.g. *Waiting for someone* |
@@ -60,7 +60,7 @@ Built-in looks can't be changed or deleted, so you can't break anything. Save yo
 | *placeholder* | A fake test sound. Delete it once there's a real one for that moment |
 | *quiet* / *too loud* | Re-record or trim that clip |
 | Length | Keep lines short: 1–4 seconds. The countdown is 3 seconds |
-| Characters | Each one has a **Glasses look** while talking, **What talks** (pupils, rings or all), and **How often** they're picked compared to the others |
+| Characters | Each one has a **Glasses look** while talking, **What talks** (the rings, or nothing), and **How often** they're picked compared to the others |
 
 **The moments, in order:**
 
@@ -81,11 +81,9 @@ Built-in looks can't be changed or deleted, so you can't break anything. Save yo
 
 ![Show tab](img/studio_show.png)
 
-1. **▶ Start (pretend camera)**, or **▶ Start (real camera + sensors)** to use the real camera: stand in front of it to start a visit. The pretend camera uses earlier photos, so nobody has to stand in front of it.
-2. **🚶 Someone walks up**: the show wakes up.
-3. **🙂 Face appears**: the eyes lock on, "hold still!", countdown, snap, scary photo, scream.
-4. **Motion sensors (live)** only appears if PIR sensors are fitted (there are none for now).
-5. The highlighted step shows where the show is. **What the screen shows** is the visitor's view.
-6. **■ Stop** when you're done (you need to stop the show to preview scenes again).
+1. **▶ Start (pretend camera)**, which uses earlier photos so nobody has to stand there, or **▶ Start (real camera)**: then just stand in front of it.
+2. With the pretend camera: **🚶 Someone walks up** wakes the show, and **🙂 Face appears** runs the lock-on, countdown, snap, before/after and scream.
+3. The highlighted step shows where the show is. **What the screen shows** is the visitor's view.
+4. **■ Stop** when you're done (you need to stop the show to preview scenes again).
 
 Your saved scenes and moment choices are used by the real show next time it starts.

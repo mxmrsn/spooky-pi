@@ -89,7 +89,7 @@ def test_library_and_play_with_talking_scene(studio):
     lib = studio.library()
     ids = sorted(c["id"] for c in lib["clips"])
     assert ids == ["scream/aah.wav", "voices/boss/spotted/hey.wav"]
-    assert lib["voices"] == [{"name": "boss", "scene": "rage", "talk": "pupils", "weight": 1.0}]
+    assert lib["voices"] == [{"name": "boss", "scene": "rage", "talk": "rings", "weight": 1.0}]
     json.dumps(lib)  # must be JSON-safe (no numpy types)
 
     studio.play("voices/boss/spotted/hey.wav")

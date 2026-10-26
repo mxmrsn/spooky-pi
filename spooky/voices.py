@@ -5,7 +5,7 @@
 
 voice.toml:
     scene  = "rage"     # LED scene while this voice talks (default: keep the state's scene)
-    talk   = "pupils"   # LEDs that pulse with the voice: pupils | rings | all | none
+    talk   = "rings"    # LEDs that pulse with the voice: rings | pupils | all | none
     weight = 1.0        # how often this voice is picked relative to the others
 
 Events: see EVENTS. How likely a line is per event is audio.voice_chance in the config.
@@ -31,7 +31,7 @@ class Voice:
     name: str
     folder: Path
     scene: str | None = None
-    talk: str = "pupils"
+    talk: str = "rings"
     weight: float = 1.0
     lines: dict = field(default_factory=dict)  # event -> [Path]
 

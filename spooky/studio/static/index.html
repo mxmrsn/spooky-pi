@@ -99,7 +99,7 @@
 
       <div class="card">
         <h2>Make your own</h2>
-        <p class="hint">Pick an effect for the rings and one for the pupils, then play with the settings. The glasses update as you go.</p>
+        <p class="hint">Pick an effect for the rings (and the pupils, if fitted), then play with the settings. The glasses update as you go.</p>
         <div class="row" style="margin-top:0">
           <label>Start from <select id="startFrom"><option value="">— blank —</option></select></label>
         </div>
@@ -167,7 +167,7 @@
         <p class="hint">The pretend camera uses earlier photos as the visitor, so nobody has to stand in front of it.</p>
         <div class="row" style="margin-top:0">
           <button class="primary" onclick="api('/api/show/start', {camera:'sim'})">▶ Start (pretend camera)</button>
-          <button onclick="api('/api/show/start', {camera:'real'})">▶ Start (real camera + sensors)</button>
+          <button onclick="api('/api/show/start', {camera:'real'})">▶ Start (real camera)</button>
           <button onclick="api('/api/show/stop')">■ Stop</button>
         </div>
         <div class="states" id="stateStrip"></div>
@@ -372,7 +372,7 @@ async function loadLibrary() {
 }
 async function saveVoice(name, scene, talk, weight) {
   if (!name || !name.trim()) return toast("Type a name first", true);
-  const r = await api("/api/voice", {name, scene, talk: talk || "pupils", weight: weight || 1});
+  const r = await api("/api/voice", {name, scene, talk: talk || "rings", weight: weight || 1});
   toast(`Saved ${r.name}`); document.getElementById("newVoice").value = ""; loadLibrary();
 }
 async function upload(files) {
@@ -460,7 +460,8 @@ async function pollStatus() {
 }
 
 (async function boot() {
-  try { INFO = await get("/api/info"); }
+  try { INFO = await get("/api/info");
+        if (!INFO.geometry.some(g => g.pupil)) document.getElementById("part-pupils").style.display = "none"; }
   catch (e) { document.getElementById("status").textContent = "⏳ waiting for the Pi…"; return setTimeout(boot, 1500); }
   renderScenes(); renderPart("rings"); renderPart("pupils");
   const start = location.hash.slice(1);

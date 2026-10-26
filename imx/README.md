@@ -1,6 +1,6 @@
 # i.MX 8M Plus display setup
 
-The i.MX shows whatever the show puts on screen: the attract card, **HOLD STILL!**, then the scary photo. The Pi serves it as an MJPEG stream (a stream of JPEG frames); the i.MX pulls it and shows it full-screen with GStreamer.
+The i.MX shows whatever the show puts on screen: the live camera with prompts, the countdown, then the before and after. The Pi serves it as an MJPEG stream (a stream of JPEG frames); the i.MX pulls it and shows it full-screen with GStreamer.
 
 ![Show network](../docs/img/display.png)
 
@@ -17,6 +17,7 @@ The i.MX shows whatever the show puts on screen: the attract card, **HOLD STILL!
 | `http://192.168.77.1:8090/stream.mjpg` | the live stream (new picture on every change, repeated every second) |
 | `http://192.168.77.1:8090/frame.jpg` | the current picture |
 | `http://192.168.77.1:8090/` | full-screen viewer page, if the image has a browser |
+| `http://192.168.77.1:8090/camera` | the raw camera with detected faces boxed (for setup, not for the screen) |
 
 ## Setup (once, as root on the i.MX)
 

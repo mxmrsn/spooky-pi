@@ -16,13 +16,13 @@ Audio files are **not committed to git**, only the folders and `voice.toml`. Sha
 | Event | When | Boss line chance* |
 |---|---|---|
 | `ambient` | idle, every 45–120 s | 100 % |
-| `awaken` | PIR wakes the show | 70 % |
+| `awaken` | a face wakes the show | 70 % |
 | `spotted` | face found, eyes start following | 80 % |
-| `hold_still` | 1 s into the 4 s lock-on: "Hold still!" | 100 % |
+| `hold_still` | 1 s into the 2 s lock-on: "Hold still!" | 100 % |
 | `countdown` | photo countdown (keep under 3 s) | 0 % |
 | `shutter` | photo taken | 0 % |
 | `scream` | scary photo appears | 60 % |
-| `outro` | photo on display | 80 % |
+| `outro` | before and after on screen | 80 % |
 
 <sub>*`audio.voice_chance` in `spooky.toml`. A boss never talks over themself, and the effect sound for the event still plays.</sub>
 
@@ -30,7 +30,7 @@ Audio files are **not committed to git**, only the folders and `voice.toml`. Sha
 
 ```toml
 scene  = "rage"     # LED scene while this boss talks: any name in spooky/scenes.py
-talk   = "all"      # what pulses with the voice: pupils | rings | all | none
+talk   = "rings"    # what pulses with the voice: rings | pupils | all | none (no pupil LEDs: pupils = rings)
 weight = 1.0        # how often this boss is picked vs the other
 ```
 
