@@ -1,6 +1,7 @@
 """Camera, face detection, and a background watcher the show polls."""
 
 import glob
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
@@ -9,6 +10,8 @@ import cv2
 import numpy as np
 
 from ..scare import MODEL
+
+log = logging.getLogger(__name__)
 
 ROTATIONS = {
     "none": None,
@@ -26,14 +29,26 @@ class Camera:
     """USB camera (MJPG) with the mounting rotation applied to every frame."""
 
     def __init__(self, index=0, size=(1920, 1080), rotate="none"):
-        self.rotation = ROTATIONS[rotate]
-        self.cap = cv2.VideoCapture(index, cv2.CAP_V4L2) if hasattr(cv2, "CAP_V4L2") else cv2.VideoCapture(index)
+        self.index, self.size, self.rotation = index, size, ROTATIONS[rotate]
+        self._open()
+
+    def _open(self):
+        self.cap = (cv2.VideoCapture(self.index, cv2.CAP_V4L2) if hasattr(cv2, "CAP_V4L2")
+                    else cv2.VideoCapture(self.index))
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.size[0])
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.size[1])
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not self.cap.isOpened():
-            raise RuntimeError(f"Cannot open camera {index}")
+            raise RuntimeError(f"Cannot open camera {self.index}")
+
+    def reopen(self):
+        """Close and open again, e.g. when it was opened at boot before it could stream."""
+        self.cap.release()
+        try:
+            self._open()
+        except RuntimeError as e:
+            log.warning("%s; will try again", e)
 
     def read(self):
         ok, frame = self.cap.read()
@@ -128,6 +143,8 @@ class Sighting:
 class FaceWatcher:
     """Reads the camera and runs face detection in a background thread while enabled."""
 
+    REOPEN_AFTER = 3.0  # seconds without a frame before the camera is reopened
+
     def __init__(self, camera, detector, clock=time.monotonic):
         self.camera, self.detector, self.clock = camera, detector, clock
         self._lock = threading.Lock()
@@ -163,17 +180,24 @@ class FaceWatcher:
     def _run(self):
         flushed = False
         n, t0 = 0, time.monotonic()
+        last_frame = time.monotonic()
         while not self._stop:
             if not self._enabled.wait(0.1):
                 flushed = False
+                last_frame = time.monotonic()
                 continue
             if not flushed:
                 self.camera.flush()
                 flushed = True
             frame = self.camera.read()
             if frame is None:
+                if time.monotonic() - last_frame > self.REOPEN_AFTER and hasattr(self.camera, "reopen"):
+                    log.warning("camera gave no frames for %.0f s; reopening it", self.REOPEN_AFTER)
+                    self.camera.reopen()
+                    last_frame = time.monotonic()
                 time.sleep(0.05)
                 continue
+            last_frame = time.monotonic()
             s = Sighting(self.clock(), frame, self.detector.detect(frame))
             with self._lock:
                 self._latest = s

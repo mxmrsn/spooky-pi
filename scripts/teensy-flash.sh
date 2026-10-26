@@ -3,7 +3,7 @@
 # Teensy hangs off. The show/Studio is stopped while flashing (it holds the serial port)
 # and started again afterwards.
 #
-#   bash scripts/teensy-flash.sh          Teensy on the Pi (needs teensy-loader-cli there: pi-setup.sh step 4)
+#   bash scripts/teensy-flash.sh          Teensy on the Pi (needs teensy-loader-cli there: pi-setup.sh installs it)
 #   bash scripts/teensy-flash.sh --here   Teensy plugged into this computer instead
 #
 # Needs arduino-cli with the Teensy core here (https://www.pjrc.com/teensy/td_download.html).

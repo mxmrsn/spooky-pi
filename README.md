@@ -6,13 +6,12 @@ A Halloween photo booth on a Raspberry Pi 4. LED "glasses" (two 16-LED rings) wa
 
 ## Quick start
 
-Assumes the hardware is connected and powered, and you can `ssh spooky-pi@spooky-pi.local` (add your key with `ssh-copy-id spooky-pi@spooky-pi.local`).
+Assumes the Pi is already set up (fresh SD card? follow [docs/PI-SETUP.md](docs/PI-SETUP.md) first), the hardware is connected and powered, and you can `ssh spooky-pi@spooky-pi.local`.
 
 1. **Copy the code to the Pi.** From your clone (on Windows, use Git Bash):
    ```bash
-   ./deploy.sh --setup
+   ./deploy.sh
    ```
-   Leave out `--setup` after the first time.
 
 2. **Start the show.** From then on it also starts by itself whenever the Pi powers up, after waiting up to 45 s for the Teensy and the camera:
    ```bash
@@ -69,4 +68,4 @@ The show is silent until you add sound clips: [sounds/README.md](sounds/README.m
 - [hardware/BOM.md](hardware/BOM.md): wiring, the Teensy and parts
 - [imx/README.md](imx/README.md): setting up the display computer
 - [docs/SD-BACKUP.md](docs/SD-BACKUP.md): backing up the Pi's SD card
-- First-time Pi setup (network, Teensy loader, boot services): `ssh -t spooky-pi@spooky-pi.local "sudo bash ~/spooky/scripts/pi-setup.sh"`
+- [docs/PI-SETUP.md](docs/PI-SETUP.md): setting up a Pi from a fresh SD card (`bash scripts/setup-new-pi.sh` does the work)
