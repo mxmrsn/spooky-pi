@@ -40,6 +40,7 @@ import cv2
 
 from . import scenes
 from .effects import Fill, color
+from .handpiece import LOOKS
 from .scare import scare
 
 log = logging.getLogger(__name__)
@@ -121,6 +122,8 @@ class Show:
             self.told_hold = False
         if state is State.CAPTURE:
             self.dev.display.flash()
+        if self.dev.handpiece is not None:
+            self.dev.handpiece.set_state(state.name, now)
         animation = self.cfg.imx.animations.get(state.name)
         if self.dev.imx is not None and animation:
             self.dev.imx.play(animation, state.name)
@@ -189,7 +192,7 @@ class Show:
     # ------------------------------------------------------------------ control
     def command(self, name, *args):
         """Queue a command from any thread: ("eyes", state or None, seconds or None), ("wake",),
-        ("reset",), ("imx", animation)."""
+        ("reset",), ("imx", animation), ("handpiece", look or None, colour or None, seconds or None)."""
         self.commands.put((name, args))
 
     def _apply_commands(self, now):
@@ -208,6 +211,12 @@ class Show:
                 self._enter(State.IDLE, now, quiet=True)
             elif name == "imx" and self.dev.imx is not None:
                 self.dev.imx.play(args[0])
+            elif name == "handpiece" and self.dev.handpiece is not None:
+                look, col, seconds = args
+                if look is None:
+                    self.dev.handpiece.release()
+                else:
+                    self.dev.handpiece.hold(look, col, now, seconds)
 
     def eyes_status(self, now=None):
         now = self.clock() if now is None else now
@@ -215,8 +224,10 @@ class Show:
         override = None
         if o is not None and (o[3] is None or now < o[3]):
             override = {"state": o[0], "seconds_left": None if o[3] is None else round(o[3] - now, 1)}
+        hand = self.dev.handpiece
         return {"show_state": self.state.name, "eyes": override["state"] if override else self.scene_name,
-                "override": override, "eye_states": list(scenes.SCENES), "show_eye_states": dict(scenes.STATE_SCENES)}
+                "override": override, "eye_states": list(scenes.SCENES), "show_eye_states": dict(scenes.STATE_SCENES),
+                "handpiece": hand.status(now) if hand is not None else None, "handpiece_looks": list(LOOKS)}
 
     # ------------------------------------------------------------------ states
     def step(self, now):
@@ -253,6 +264,8 @@ class Show:
     def render(self, now):
         scene, t = self.active_scene(now)
         self.dev.leds.show(scene.render(t, self.dev.layout))
+        if self.dev.handpiece is not None:
+            self.dev.handpiece.render(now)
         fps = f" cam {self.dev.watcher.fps:.0f} fps" if self.dev.watcher else ""
         self.dev.leds.set_status(f"{self.state.name:<10} {self.elapsed(now):5.1f} s{fps}   "
                                  "(w = walk up, f = face, q = quit)")

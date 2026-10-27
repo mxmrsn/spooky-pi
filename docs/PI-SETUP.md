@@ -62,6 +62,7 @@ Step in front of the camera for a full visit. Then make a backup card: [SD-BACKU
 | Symptom | Try |
 |---|---|
 | Setup says it needs internet | Connect the Pi to Wi-Fi (desktop network icon, or `sudo nmtui`), then run `bash scripts/pc/setup-new-pi.sh` again. It's safe to rerun. |
+| Monitor plugged into HDMI1 (the port further from USB-C power) | Run `ssh -t spooky-pi@spooky-pi.local "sudo HDMI_PORT=HDMI-A-2 bash ~/spooky/scripts/pi/pi-setup.sh"` so that port is the one forced on, then reboot. |
 | Desktop showed at first boot, monitor blank after setup | Undo the forced HDMI mode: `ssh -t spooky-pi@spooky-pi.local "sudo cp /boot/firmware/cmdline.txt.bak-spooky /boot/firmware/cmdline.txt && sudo reboot"`. To rerun the setup later without it, add `FORCE_HDMI=0` after `sudo`. |
 | No LEDs | `spooky-mode.sh log` should show `Teensy: spooky-teensy …`. If it doesn't, check the Teensy's USB and its 5 V brick. |
 | Show runs but no camera image | `spooky-mode.sh restart`; the log says if the camera can't be opened. |

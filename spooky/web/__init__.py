@@ -1,5 +1,5 @@
 """The Pi's one web server, on [web] port (8090): the visitor screen, the camera view and
-the control API that teammates use to drive the eyes, the show and the i.MX.
+the control API that teammates use to drive the eyes, the handpiece, the show and the i.MX.
 
     GET  /                                visitor screen, full-screen (the HDMI kiosk shows this)
     GET  /stream.mjpg   /frame.jpg        the visitor screen as an MJPEG stream / its current picture
@@ -12,6 +12,9 @@ the control API that teammates use to drive the eyes, the show and the i.MX.
     POST /api/show  {"action": "wake"}                start a visit (from IDLE)
     POST /api/show  {"action": "reset"}               drop the visit and go back to IDLE
     POST /api/imx   {"animation": "reveal"}           tell the i.MX to play an animation now
+    POST /api/handpiece  {"look": "strobe", "color": "#00ff00", "seconds": 3}
+                                                      hold a handpiece look (colour and seconds optional)
+    POST /api/handpiece  {"look": null}               give the handpiece back to the show
 
 Control commands are queued and applied on the show's next tick, so they're safe from
 any thread. Guide: docs/EYES.md.
@@ -25,7 +28,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .. import scenes
+from .. import handpiece, scenes
 
 log = logging.getLogger(__name__)
 STATIC = Path(__file__).with_name("static")
@@ -75,6 +78,15 @@ class WebServer:
                         if body.get("action") not in ACTIONS:
                             raise ValueError(f"action must be one of {', '.join(ACTIONS)}")
                         command = (body["action"],)
+                    elif path == "/api/handpiece":
+                        look, col, seconds = body.get("look"), body.get("color"), body.get("seconds")
+                        if look is not None:
+                            handpiece.parse(look if not col else f"{look}:{col}")  # raises if unknown
+                        if seconds is not None and not (isinstance(seconds, (int, float)) and seconds > 0):
+                            raise ValueError("seconds must be a positive number")
+                        if web.show is not None and web.show.dev.handpiece is None:
+                            raise ValueError("no handpiece fitted ([handpiece] leds = 0)")
+                        command = ("handpiece", look, col, seconds)
                     elif path == "/api/imx":
                         animation = body.get("animation")
                         if not isinstance(animation, str) or not animation:
@@ -84,7 +96,7 @@ class WebServer:
                         command = ("imx", animation)
                     else:
                         return self._json(404, {"error": f"no such endpoint {path}"})
-                except (ValueError, AttributeError) as e:  # bad JSON, a non-object body, a bad value
+                except (ValueError, KeyError, AttributeError) as e:  # bad JSON, a non-object body, a bad value
                     return self._json(400, {"error": str(e)})
                 if self._api(lambda show: show.command(*command) or {"ok": True}):
                     log.info("control: %s %s", path, body)

@@ -1,12 +1,13 @@
-"""The Teensy 4.1 on USB that drives the LED glasses.
+"""The Teensy 4.1 on USB that drives the LED glasses (pin 1) and the handpiece strip (pin 8).
 
 Protocol (firmware: teensy/spooky_teensy):
-  Pi -> Teensy  LED frame: A5 5A <n> <n x R,G,B> <sum of the RGB bytes & 0xFF>
+  Pi -> Teensy  LED frame: A5 <5A + channel> <n> <n x R,G,B> <sum of the RGB bytes & 0xFF>
+                (channel 0 = glasses, 1 = handpiece)
                 "?": ask for the hello line
-  Teensy -> Pi  "spooky-teensy <version> leds=<max> frames=<good> bad=<bad>"  at boot and after "?"
+  Teensy -> Pi  "spooky-teensy <version> leds=<max> hand=<max> frames=<good> bad=<bad>"  at boot and after "?"
 
-The Teensy blanks the LEDs if no frame arrives for 2 s, so the link resends the
-last frame while the show is quiet. Everything using the Teensy shares one link per
+The Teensy blanks a channel if no frame arrives for 2 s, so the link resends each
+channel's last frame while the show is quiet. Everything using the Teensy shares one link per
 port; it reopens the port on its own if the Teensy is unplugged or resets.
 """
 
@@ -19,7 +20,8 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-SYNC = b"\xa5\x5a"
+SYNC = b"\xa5\x5a"  # + channel on the second byte
+GLASSES, HANDPIECE = 0, 1
 BY_ID = "/dev/serial/by-id/*Teensyduino*"
 KEEPALIVE = 0.5  # resend the last frame after this long without one
 RETRY = 2.0  # seconds between reconnect attempts
@@ -37,13 +39,13 @@ def open_serial(port):
     return serial.Serial(port or find_port(), timeout=0.1, write_timeout=1.0)
 
 
-def encode_frame(physical_rgb):
+def encode_frame(physical_rgb, channel=GLASSES):
     """Physical uint8 RGB (n, 3) -> one LED frame for the firmware."""
     data = np.ascontiguousarray(physical_rgb, dtype=np.uint8).tobytes()
     n = len(data) // 3
     if n > 255:
         raise ValueError(f"{n} LEDs is more than one frame can carry")
-    return SYNC + bytes([n]) + data + bytes([sum(data) & 0xFF])
+    return bytes([SYNC[0], SYNC[1] + channel, n]) + data + bytes([sum(data) & 0xFF])
 
 
 class TeensyLink:
@@ -53,10 +55,10 @@ class TeensyLink:
         self.port, self.opener, self.clock = port, opener, clock
         self.hello = None  # the firmware's hello line, once seen
         self.users = 0
-        self.lock = threading.RLock()  # guards the port and the frame
+        self.lock = threading.RLock()  # guards the port and the frames
         self.ser = None
-        self.frame = None
-        self.last_write = -1e9
+        self.frames = {}  # channel -> last frame sent
+        self.last_write = {}  # channel -> when it was sent
         self.next_retry = 0.0
         self.buf = b""
         self.warned = False
@@ -71,8 +73,8 @@ class TeensyLink:
         with self.lock:
             self.ser = self.opener(self.port)
             self.ser.write(b"?")
-            if self.frame is not None:
-                self._send(self.frame)
+            for channel, frame in self.frames.items():
+                self._send(channel, frame)
 
     def _drop(self, err):
         with self.lock:
@@ -86,20 +88,20 @@ class TeensyLink:
             self.ser = None
             self.next_retry = self.clock() + RETRY
 
-    def _send(self, data):  # caller holds the lock
+    def _send(self, channel, data):  # caller holds the lock
         if self.ser is None:
             return
         try:
             self.ser.write(data)
-            self.last_write = self.clock()
+            self.last_write[channel] = self.clock()
         except OSError as e:
             self._drop(e)
 
-    def send_leds(self, physical_rgb):
-        frame = encode_frame(physical_rgb)
+    def send_leds(self, physical_rgb, channel=GLASSES):
+        frame = encode_frame(physical_rgb, channel)
         with self.lock:
-            self.frame = frame
-            self._send(frame)
+            self.frames[channel] = frame
+            self._send(channel, frame)
 
     def feed(self, chunk):
         self.buf += chunk
@@ -136,8 +138,9 @@ class TeensyLink:
         if chunk:
             self.feed(chunk)
         with self.lock:
-            if self.frame is not None and self.clock() - self.last_write > KEEPALIVE:
-                self._send(self.frame)
+            for channel, frame in self.frames.items():
+                if self.clock() - self.last_write.get(channel, -1e9) > KEEPALIVE:
+                    self._send(channel, frame)
         return True
 
     def _run(self):
@@ -178,13 +181,13 @@ def release(link):
 
 
 class TeensyStrip:
-    """The WS2812B chain on the Teensy. Same interface as TerminalStrip and NullStrip."""
+    """One WS2812B chain on the Teensy (GLASSES or HANDPIECE). Same interface as TerminalStrip and NullStrip."""
 
-    def __init__(self, port=""):
-        self.link = connect(port)
+    def __init__(self, port="", channel=GLASSES):
+        self.link, self.channel = connect(port), channel
 
     def write(self, physical_rgb):
-        self.link.send_leds(physical_rgb)
+        self.link.send_leds(physical_rgb, self.channel)
 
     def close(self):
         release(self.link)

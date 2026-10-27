@@ -23,6 +23,16 @@ After a visit the show waits 6 s (`rearm`); a face still in view then starts the
 
 On each state change the show also sends the i.MX 8M Plus a UDP trigger naming an animation, by default the state in lower case (`awake`, `reveal`, …). The i.MX plays it on its own display. Change the names in `[imx] animations`. The protocol and a receiver are in [imx/README.md](../imx/README.md).
 
+## The handpiece
+
+An 8-LED strip on the Teensy's pin 8 with its own looks: `off`, `glow`, `solid`, `pulse`, `flicker`, `strobe`, `chase`, `fill` (fills along the strip over 3 s) and `flash`. Each can take a colour (`#rrggbb` or a palette name such as `blood`, `toxic`, `ghost`). Each show state has one (`[handpiece] looks`, e.g. `REVEAL = "strobe:#00ff00"`):
+
+| State | IDLE | AWAKE | WATCHING | COUNTDOWN | CAPTURE | PROCESSING | REVEAL | SHOWING |
+|---|---|---|---|---|---|---|---|---|
+| Look | glow | pulse | pulse | fill | flash | chase | strobe | flicker |
+
+Hold any look through the control API below; it goes back to the state's look when the time runs out or you release it. The looks are defined in [spooky/handpiece.py](../spooky/handpiece.py).
+
 ## Eye states
 
 | Eye state | Look |
@@ -59,6 +69,8 @@ It's part of the Pi's one web server, on port **8090** (`[web] port`) under `/ap
 | `POST /api/show {"action": "wake"}` | start a visit (from IDLE only) |
 | `POST /api/show {"action": "reset"}` | drop the visit and go back to IDLE |
 | `POST /api/imx {"animation": "reveal"}` | tell the i.MX to play an animation now |
+| `POST /api/handpiece {"look": "strobe", "color": "#00ff00", "seconds": 3}` | hold a handpiece look (colour and seconds optional) |
+| `POST /api/handpiece {"look": null}` | give the handpiece back to the show |
 
 A hold overrides the show's own eye states, voice lines included, but the show keeps running underneath: the camera, screen and photo carry on. Bad requests get a 400 with an `error` message.
 
@@ -77,7 +89,7 @@ def eyes(state, seconds=None, host="spooky-pi.local:8090"):
 eyes("glare", 3)
 ```
 
-Or use the helper: `spooky-eyes rage --seconds 5`, `spooky-eyes auto`, `spooky-eyes --wake`, `spooky-eyes --imx reveal`. Without installing the package, `python -m spooky.tools.eyes …` from a clone does the same with only the standard library.
+Or use the helper: `spooky-eyes rage --seconds 5`, `spooky-eyes auto`, `spooky-eyes --wake`, `spooky-eyes --imx reveal`, `spooky-eyes --hand strobe --color "#00ff00" --seconds 3`, `spooky-eyes --hand auto`. Without installing the package, `python -m spooky.tools.eyes …` from a clone does the same with only the standard library.
 
 ## Changing things
 

@@ -3,35 +3,50 @@
 #include <Arduino.h>
 #include <WS2812Serial.h>
 
-const char *VERSION = "3";
-const int LED_PIN = 1;
-const int MAX_LEDS = 64;  // the glasses have 34; extra pixels are sent dark
-const uint32_t FRAME_TIMEOUT_MS = 2000;  // blank the LEDs if the Pi goes quiet
+const char *VERSION = "4";
+const uint32_t FRAME_TIMEOUT_MS = 2000;  // blank a channel if the Pi goes quiet
 
-byte drawingMemory[MAX_LEDS * 3];
-DMAMEM byte displayMemory[MAX_LEDS * 12];
-WS2812Serial leds(MAX_LEDS, displayMemory, drawingMemory, LED_PIN, WS2812_GRB);
+// Channel 0: the glasses on pin 1. Channel 1: the handpiece on pin 8. Each needs a serial TX
+// pin for WS2812Serial; extra pixels past what the Pi sends are kept dark.
+const int GLASSES_PIN = 1, GLASSES_MAX = 64;
+const int HAND_PIN = 8, HAND_MAX = 32;
+
+byte glassesDrawing[GLASSES_MAX * 3];
+DMAMEM byte glassesDisplay[GLASSES_MAX * 12];
+byte handDrawing[HAND_MAX * 3];
+DMAMEM byte handDisplay[HAND_MAX * 12];
+
+struct Channel {
+  WS2812Serial strip;
+  int max;
+  uint32_t lastFrame;
+  bool blanked;
+};
+Channel channels[] = {
+  {WS2812Serial(GLASSES_MAX, glassesDisplay, glassesDrawing, GLASSES_PIN, WS2812_GRB), GLASSES_MAX, 0, true},
+  {WS2812Serial(HAND_MAX, handDisplay, handDrawing, HAND_PIN, WS2812_GRB), HAND_MAX, 0, true},
+};
+const int NUM_CHANNELS = sizeof(channels) / sizeof(channels[0]);
 
 enum State { SYNC1, SYNC2, COUNT, DATA, SUM };
 State state = SYNC1;
-byte frame[MAX_LEDS * 3];
+int channel = 0;
+byte frame[GLASSES_MAX * 3];
 int frameLen = 0, got = 0;
 byte sum = 0;
-
-uint32_t lastFrame = 0;
 uint32_t frames = 0, badFrames = 0;  // reported in the hello line, for debugging the link
-bool blanked = true;
 
 void hello() {
-  Serial.printf("spooky-teensy %s leds=%d frames=%lu bad=%lu\n", VERSION, MAX_LEDS, frames, badFrames);
+  Serial.printf("spooky-teensy %s leds=%d hand=%d frames=%lu bad=%lu\n", VERSION, GLASSES_MAX, HAND_MAX,
+                frames, badFrames);
 }
 
-void showFrame(const byte *rgb, int n) {
-  for (int i = 0; i < MAX_LEDS; i++) {
-    if (i < n) leds.setPixel(i, rgb[3 * i], rgb[3 * i + 1], rgb[3 * i + 2]);
-    else leds.setPixel(i, 0, 0, 0);
+void showFrame(Channel &c, const byte *rgb, int n) {
+  for (int i = 0; i < c.max; i++) {
+    if (i < n) c.strip.setPixel(i, rgb[3 * i], rgb[3 * i + 1], rgb[3 * i + 2]);
+    else c.strip.setPixel(i, 0, 0, 0);
   }
-  leds.show();
+  c.strip.show();
 }
 
 void feed(byte b) {
@@ -40,11 +55,12 @@ void feed(byte b) {
       if (b == 0xA5) state = SYNC2;
       else if (b == '?') hello();
       break;
-    case SYNC2:
-      state = b == 0x5A ? COUNT : (b == 0xA5 ? SYNC2 : SYNC1);
+    case SYNC2:  // 5A = glasses, 5B = handpiece
+      if (b == 0x5A || b == 0x5B) { channel = b - 0x5A; state = COUNT; }
+      else state = b == 0xA5 ? SYNC2 : SYNC1;
       break;
     case COUNT:
-      if (b > MAX_LEDS) { state = SYNC1; break; }
+      if (b > channels[channel].max) { state = SYNC1; break; }
       frameLen = b * 3; got = 0; sum = 0;
       state = frameLen ? DATA : SUM;
       break;
@@ -55,9 +71,10 @@ void feed(byte b) {
       break;
     case SUM:
       if (b == sum) {
-        showFrame(frame, frameLen / 3);
-        lastFrame = millis();
-        blanked = false;
+        Channel &c = channels[channel];
+        showFrame(c, frame, frameLen / 3);
+        c.lastFrame = millis();
+        c.blanked = false;
         frames++;
       } else {
         badFrames++;
@@ -69,11 +86,13 @@ void feed(byte b) {
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  leds.begin();
-  for (int i = 0; i < MAX_LEDS * 3; i++) frame[i] = 24;  // power-up flash: dim white for 0.4 s,
-  showFrame(frame, MAX_LEDS);                              // so the wiring can be checked without the Pi
+  for (int i = 0; i < GLASSES_MAX * 3; i++) frame[i] = 24;  // power-up flash: dim white for 0.4 s,
+  for (int k = 0; k < NUM_CHANNELS; k++) {                  // so the wiring can be checked without the Pi
+    channels[k].strip.begin();
+    showFrame(channels[k], frame, channels[k].max);
+  }
   delay(400);
-  showFrame(frame, 0);
+  for (int k = 0; k < NUM_CHANNELS; k++) showFrame(channels[k], frame, 0);
   Serial.begin(115200);  // USB serial: the baud rate is ignored
   hello();
 }
@@ -82,10 +101,15 @@ void loop() {
   while (Serial.available()) feed(Serial.read());
 
   uint32_t now = millis();
-  if (!blanked && now - lastFrame > FRAME_TIMEOUT_MS) {
-    showFrame(frame, 0);
-    blanked = true;
+  bool anyLive = false;
+  for (int k = 0; k < NUM_CHANNELS; k++) {
+    Channel &c = channels[k];
+    if (!c.blanked && now - c.lastFrame > FRAME_TIMEOUT_MS) {
+      showFrame(c, frame, 0);
+      c.blanked = true;
+    }
+    anyLive |= !c.blanked;
   }
 
-  digitalWrite(LED_BUILTIN, (now / (blanked ? 500 : 125)) % 2);  // heartbeat: slow idle, fast with frames
+  digitalWrite(LED_BUILTIN, (now / (anyLive ? 125 : 500)) % 2);  // heartbeat: slow idle, fast with frames
 }

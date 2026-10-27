@@ -2,7 +2,7 @@
 
 A Halloween photo booth on a Raspberry Pi 4. LED "glasses" (two 16-LED rings) watch for a face. When someone steps up, the eyes lock on, a countdown runs on screen, and the camera takes their photo. The screen then shows it next to a scary version for 15 s, and the booth goes back to waiting.
 
-**Hardware:** a Pi 4 runs the show. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings. The Pi's own HDMI monitor shows the visitor screen (camera, countdown, before/after), which is also a web page on port 8090. A separate i.MX 8M Plus with its own display plays animations when the Pi tells it to, over Ethernet.
+**Hardware:** a Pi 4 runs the show. A See3CAM USB camera spots faces. A Teensy 4.1 on the Pi's USB drives the LED rings and the handpiece's LED strip. The Pi's own HDMI monitor shows the visitor screen (camera, countdown, before/after), which is also a web page on port 8090. A separate i.MX 8M Plus with its own display plays animations when the Pi tells it to, over Ethernet.
 
 ## Quick start
 
@@ -44,6 +44,7 @@ Watch it from the logs with `ssh spooky-pi@spooky-pi.local "bash ~/spooky/script
 | Show the visitor screen on the Pi's own HDMI | `spooky-mode.sh kiosk on` (full-screen browser, also at every login; `kiosk off` to stop) |
 | Drive the eyes from your code | the control API at `:8090/api`: see [docs/EYES.md](docs/EYES.md), or `spooky-eyes rage --seconds 5` |
 | Trigger an i.MX animation by hand | `spooky-eyes --imx reveal` |
+| Light the handpiece by hand | `spooky-eyes --hand strobe --color "#00ff00" --seconds 3` |
 | Hear the Pi's audio on your PC | `python -m spooky.tools.listen` (needs `pip install -e ".[listen]"`) |
 
 The show is silent until you add sound clips: [sounds/README.md](sounds/README.md).
@@ -64,6 +65,7 @@ Commands: `spooky` (the show), `spooky-studio` (the artists' web tool), `spooky-
 |---|---|
 | `spooky/show.py` | the state machine: when the eyes wake, lock on, count down, snap and reveal |
 | `spooky/scenes.py`, `effects.py` | the eye states (LED looks) and which one each show state uses |
+| `spooky/handpiece.py` | the handpiece strip's looks and which one each show state uses |
 | `spooky/config.py` | every setting and its default; override any of them in `spooky.toml` (copy `spooky.example.toml`) |
 | `spooky/web/` | the one web server on 8090: visitor screen, camera view, control API |
 | `spooky/hw/` | camera, the visitor screen (`display.py`), LEDs (`teensy.py`), i.MX triggers (`imx.py`), speaker |

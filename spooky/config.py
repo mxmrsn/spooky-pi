@@ -37,6 +37,18 @@ class LedConfig:
 
 
 @dataclass
+class HandpieceConfig:
+    # A WS2812B strip on Teensy pin 8 (spooky/handpiece.py). 0 = not fitted.
+    leds: int = 8
+    brightness: float = 0.4  # cap, 0..1 (gamma comes from [leds])
+    max_current_a: float = 0.4
+    # Look for each show state: a name from handpiece.LOOKS, optionally with a colour ("strobe:#00ff00")
+    looks: dict = field(default_factory=lambda: {
+        "IDLE": "glow", "AWAKE": "pulse", "WATCHING": "pulse", "COUNTDOWN": "fill", "CAPTURE": "flash",
+        "PROCESSING": "chase", "REVEAL": "strobe", "SHOWING": "flicker"})
+
+
+@dataclass
 class CameraConfig:
     index: int = 0
     width: int = 1920
@@ -112,6 +124,7 @@ class WebConfig:
 class Config:
     teensy: TeensyConfig = field(default_factory=TeensyConfig)
     leds: LedConfig = field(default_factory=LedConfig)
+    handpiece: HandpieceConfig = field(default_factory=HandpieceConfig)
     camera: CameraConfig = field(default_factory=CameraConfig)
     show: ShowConfig = field(default_factory=ShowConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)

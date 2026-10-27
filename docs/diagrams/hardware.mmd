@@ -6,6 +6,7 @@ flowchart LR
     USB5["5 V USB brick<br/>2.5 A"] -- "VIN" --> TEENSY
     TEENSY["Teensy 4.1<br/>spooky_teensy firmware"]
     TEENSY -- "pin 1" --> RING["LED glasses<br/>2 × 16-LED rings, one chain<br/>32 × WS2812B"]
+    TEENSY -- "pin 8" --> HAND["Handpiece<br/>8 × WS2812B"]
     PI -- "3.5 mm" --> SPK["Powered speaker"]
     PI -- "HDMI0 · kiosk" --> MON["Pi's monitor<br/>camera, countdown, before/after"]
     PI -- "Ethernet · UDP triggers :5005" --> IMX["i.MX 8M Plus · Yocto<br/>own display, own animations"]

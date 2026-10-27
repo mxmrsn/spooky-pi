@@ -400,6 +400,10 @@ def test_control_api_over_http(rig):
         code, err = post("/api/imx", {"animation": "reveal"})
         assert code == 400 and "off" in err["error"]  # the rig has no i.MX
         assert post("/api/imx", {"animation": ""})[0] == 400
+        code, err = post("/api/handpiece", {"look": "strobe"})
+        assert code == 400 and "no handpiece" in err["error"]  # the rig has none
+        assert "unknown handpiece look" in post("/api/handpiece", {"look": "disco"})[1]["error"]
+        assert post("/api/handpiece", {"look": "pulse", "color": "#zz0000"})[0] == 400
     finally:
         ctl.close()
 
@@ -437,3 +441,25 @@ def test_imx_trigger_without_a_receiver_doesnt_stop_the_show(rig):
     dev.inputs.pending.append(0)
     run(show, clock, 0.5)
     assert show.state is State.AWAKE
+
+
+def test_handpiece_follows_the_show_and_can_be_held(rig):
+    from spooky.config import HandpieceConfig
+    from spooky.handpiece import Handpiece
+    from spooky.hw.leds import NullStrip
+
+    show, dev, clock, sc = rig
+    dev.handpiece = Handpiece(HandpieceConfig(), 2.2, NullStrip())
+    dev.inputs.pending.append(0)
+    run(show, clock, DT)
+    assert show.eyes_status()["handpiece"]["look"] == "pulse"  # AWAKE's look
+    show.command("handpiece", "strobe", "#00ff00", 1.0)
+    run(show, clock, DT)
+    hp = show.eyes_status()["handpiece"]
+    assert hp["look"] == "strobe:#00ff00" and hp["held"]
+    run(show, clock, 1.0)
+    assert show.eyes_status()["handpiece"]["look"] == "pulse"
+    show.command("handpiece", "glow", None, None)
+    show.command("handpiece", None, None, None)  # released straight away
+    run(show, clock, DT)
+    assert not show.eyes_status()["handpiece"]["held"]

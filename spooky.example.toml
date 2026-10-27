@@ -10,6 +10,11 @@ ring_clockwise = [true, true]
 brightness = 0.4
 max_current_a = 2.0
 
+[handpiece]
+leds = 8                 # strip on Teensy pin 8; 0 = not fitted
+brightness = 0.4
+# looks = { REVEAL = "strobe:#00ff00", IDLE = "off" }   names: spooky/handpiece.py
+
 [camera]
 rotate = "ccw"
 gaze_mirror = true   # flip if the eyes look away from visitors

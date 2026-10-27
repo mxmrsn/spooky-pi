@@ -8,6 +8,7 @@ running with whatever works.
 import logging
 from dataclasses import dataclass
 
+from ..handpiece import Handpiece
 from ..layout import Layout
 from ..voices import VoiceBank
 from .camera import Camera, FaceDetector, FaceWatcher, SimCamera, quiet_opencv
@@ -16,7 +17,7 @@ from .imx import ImxLink, LogImx
 from .inputs import SimInputs
 from .leds import Leds, NullStrip, TerminalStrip
 from .speaker import LogPlayer, PygamePlayer, SoundBank
-from .teensy import TeensyStrip
+from .teensy import HANDPIECE, TeensyStrip
 
 log = logging.getLogger(__name__)
 
@@ -34,9 +35,11 @@ class Devices:
     sim_camera: SimCamera | None = None
     voices: VoiceBank | None = None
     imx: object = None  # animation triggers for the i.MX, or None
+    handpiece: Handpiece | None = None
 
     def close(self):
-        for d in (self.watcher, self.leds, self.inputs, self.sounds, self.display, self.imx):
+        for d in (self.watcher, self.leds, self.inputs, self.sounds, self.display, self.imx,
+                  self.handpiece):
             if d is not None:
                 try:
                     d.close()
@@ -109,4 +112,9 @@ def build(cfg, sim=(), terminal_preview=None):
         imx = LogImx()
     elif cfg.imx.host:
         imx = _try("i.MX triggers", lambda: ImxLink(cfg.imx.host, cfg.imx.port), lambda: None)
-    return Devices(layout, leds, inputs, sounds, display, watcher, sim_camera, voices, imx)
+    handpiece = None
+    if cfg.handpiece.leds:
+        hand_strip = NullStrip() if "leds" in sim else _try(
+            "handpiece LEDs", lambda: TeensyStrip(cfg.teensy.port, HANDPIECE), NullStrip)
+        handpiece = Handpiece(cfg.handpiece, cfg.leds.gamma, hand_strip)
+    return Devices(layout, leds, inputs, sounds, display, watcher, sim_camera, voices, imx, handpiece)
